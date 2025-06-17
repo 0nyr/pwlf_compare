@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/src/**",
+                "/home/onyr/gurobi1103/linux64/include/**",
+                "/home/onyr/cplex2210/CPLEX_Studio221/cplex/include/**",
+                "/home/onyr/cplex2210/CPLEX_Studio221/concert/include/**",
+                "/home/onyr/cplex2210/CPLEX_Studio221/cpoptimizer/include/**",
+                "/nix/store/xgwln3gcilw2v8qvvc91jpdifh8mnwwz-python3.13-pybind11-2.13.6/include/**"
+            ],
+            "defines": [],
+            "compilerPath": "/nix/store/ii75mhh7sxl11167m1b86p0qrjsjyjmd-gcc-wrapper-14-20241116/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "gnu++20",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compileCommands": [
+                "${workspaceFolder}/src/build/compile_commands.json"
+            ]
+        }
+    ],
+    "version": 4
+}
