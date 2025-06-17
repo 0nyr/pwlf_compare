@@ -1,1 +1,5 @@
+# Ignore build artifacts
 src/build
+
+# Ignore python execution files
+**/__pycache__

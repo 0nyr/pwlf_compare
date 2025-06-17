@@ -179,6 +179,10 @@ PYBIND11_MODULE(pwlf_cpp, m) {
         .def("restrict_image", &goc::PWLFunction::RestrictImage, "Restrict function image",
              py::arg("image"))
         .def("check_invariant", &goc::PWLFunction::check_invariant, "Check function invariant")
+        .def("check_normalization", &goc::PWLFunction::check_normalization, "Check function normalization")
+        .def("copy_breakpoints_and_values", &goc::PWLFunction::copy_breakpoints_and_values,
+             "Get breakpoints and values as a pair of vectors",
+             py::return_value_policy::reference_internal)
         .def("__eq__", &goc::PWLFunction::operator==)
         .def("__ne__", &goc::PWLFunction::operator!=)
         .def("__radd__", [](const goc::PWLFunction& f, double a) { return a + f; })
@@ -232,6 +236,7 @@ PYBIND11_MODULE(pwlf_cpp, m) {
         .def("__call__", &nyr::CPWLF::operator(), "Evaluate function at x",
             py::arg("x"))
         .def("check_invariant", &nyr::CPWLF::check_invariant, "Check function invariant")
+        .def("check_normalization", &nyr::CPWLF::check_normalization, "Check function normalization")
         .def("compose", &nyr::CPWLF::compose, "Compose with other CPWLF",
              py::arg("g"))
         .def("to_goc_pwl_function", &nyr::CPWLF::to_goc_pwl_function, "Convert to GOC PWL function")
@@ -243,6 +248,9 @@ PYBIND11_MODULE(pwlf_cpp, m) {
              py::return_value_policy::reference_internal)
         .def("get_values", &nyr::CPWLF::get_values, "Get values",
              py::return_value_policy::reference_internal)
+        .def("copy_breakpoints_and_values", &nyr::CPWLF::copy_breakpoints_and_values,
+                "Copy breakpoints and values as a pair of vectors",
+                py::return_value_policy::reference_internal)
         .def("__eq__", &nyr::CPWLF::operator==)
         .def("__repr__", [](const nyr::CPWLF& f) {
             std::ostringstream oss;

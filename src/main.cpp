@@ -594,6 +594,69 @@ bool PWLFunction::check_invariant() const
 	return true;
 }
 
+bool PWLFunction::check_normalization() const {
+    if (pieces_.empty()) return domain_ == Interval(INFTY, -INFTY) && image_ == Interval(INFTY, -INFTY);
+    
+    // Check that the pieces are ordered by their domain.
+    for (size_t i = 1; i < pieces_.size(); ++i)
+    {
+        if (epsilon_bigger(pieces_[i].domain.left, pieces_[i-1].domain.right))
+            return false;
+    }
+    
+    // Check that the pieces do not overlap.
+    for (size_t i = 0; i < pieces_.size() - 1; ++i)
+    {
+        if (pieces_[i].domain.Intersects(pieces_[i+1].domain))
+            return false;
+    }
+
+    // Check that no piece is the continuation of the previous piece.
+    for (size_t i = 1; i < pieces_.size(); ++i)
+    {
+        if (epsilon_equal(pieces_[i-1].domain.right, pieces_[i].domain.left) &&
+            epsilon_equal(pieces_[i-1].Value(pieces_[i-1].domain.right), pieces_[i].Value(pieces_[i].domain.left)) &&
+            epsilon_equal(pieces_[i-1].slope, pieces_[i].slope))
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+const std::pair<std::vector<double>, std::vector<double>> PWLFunction::copy_breakpoints_and_values() const
+{
+    std::vector<double> breakpoints;
+    std::vector<double> values;
+    for (auto& p: pieces_)
+    {
+        // Note that we expect the pieces to be over a continuous domain
+        // so adjascent pieces share breakpoints.
+        if (breakpoints.empty())
+        {
+            breakpoints.push_back(p.domain.left);
+            breakpoints.push_back(p.domain.right);
+            values.push_back(p.image.left);
+            values.push_back(p.image.right);
+        }
+        else
+        {
+            // check that the last breakpoint matches the first of the current piece
+            // else throw an error.
+            if (!epsilon_equal(breakpoints.back(), p.domain.left) ||
+                !epsilon_equal(values.back(), p.image.left))
+            {
+                fail("PWLFunction::get_breakpoints_and_values: discontinuity found between pieces.");
+            }
+            // add the right endpoint of the current piece
+            breakpoints.push_back(p.domain.right);
+            values.push_back(p.image.right);
+        }
+    }
+    return {breakpoints, values};
+}
+
 void PWLFunction::Print(std::ostream& os) const
 {
 	os << "[";
@@ -1011,6 +1074,38 @@ bool CPWLF::check_invariant() const {
         auto minmax = std::minmax_element(values_.begin(), values_.end());
         if (image_.left != *minmax.first || image_.right != *minmax.second) {
             return false; // Image does not match values
+        }
+    }
+
+    return true;
+}
+
+bool CPWLF::check_normalization() const {
+    if (breakpoints_.empty()) return domain_ == goc::Interval() && image_ == goc::Interval();
+    
+    // Check that the pieces are ordered by their domain.
+    for (size_t i = 1; i < breakpoints_.size(); ++i) {
+        if (goc::epsilon_bigger(breakpoints_[i], breakpoints_[i-1])) {
+            return false;
+        }
+    }
+
+    // Check that no piece is the continuation of the previous piece.
+    for (size_t i = 1; i < breakpoints_.size() - 1; ++i) {
+        double x_prev = breakpoints_[i-1];
+        double y_prev = values_[i-1];
+        double x_curr = breakpoints_[i];
+        double y_curr = values_[i];
+        double x_next = breakpoints_[i+1];
+        double y_next = values_[i+1];
+
+        // Denominators cannot be zero because of the unique-sort step.
+        double slope1 = (y_curr - y_prev) / (x_curr - x_prev);
+        double slope2 = (y_next - y_curr) / (x_next - x_curr);
+
+        // If the slopes are not different, the current breakpoint is not necessary.
+        if (goc::epsilon_equal(slope1, slope2)) {
+            return false; 
         }
     }
 

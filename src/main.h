@@ -591,6 +591,9 @@ public:
 	PWLFunction RestrictImage(const Interval& image) const;
 
 	bool check_invariant() const;
+	bool check_normalization() const;
+
+	const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const;
 
 	// Prints the function.
 	// Format: [p1, p2, ..., pn].
@@ -751,6 +754,9 @@ public:
     // Checks if the function is well-formed.
     bool check_invariant() const;
 
+	// Checks if the function is normalized.
+	bool check_normalization() const;
+
 	// Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
 	// Observation: the domain of the new function are those x such that g(x) \in dom(f).
     CPWLF compose(const CPWLF& g) const;
@@ -763,7 +769,10 @@ public:
     const goc::Interval& get_domain() const { return domain_; }
     const goc::Interval& get_image() const { return image_; }
     const std::vector<double>& get_breakpoints() const { return breakpoints_; }
-    const std::vector<double>& get_values() const { return values_; }
+    const std::vector<double>& get_values() const { return values_; }	
+	const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const {
+		return {breakpoints_, values_};
+	}
 
     // Returns: if the function equals another function.
     bool operator==(const CPWLF& other) const;

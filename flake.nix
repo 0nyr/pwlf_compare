@@ -29,6 +29,9 @@
             pythonPackages.python
             pythonPackages.numpy
             pythonPackages.tqdm
+            pythonPackages.pandas
+            pythonPackages.seaborn
+            pythonPackages.matplotlib
             
             # C/C++ development
             pkgs.gcc
