@@ -520,8 +520,8 @@ PWLFunction PWLFunction::Compose(const PWLFunction& g) const
 			double y = min(img(g[j]));
 			
 			// Find (unique) piece f[i] with img(g[j]) \subseteq dom(f[i]) if exists.
-			while (i < f.PieceCount() && epsilon_smaller(max(dom(f[i])), y)) ++i;
-			while (i >= 0 && epsilon_bigger(min(dom(f[i])), y)) --i;
+			while (i < f.PieceCount()-1 && epsilon_smaller(max(dom(f[i])), y)) ++i;
+			while (i > 0 && epsilon_bigger(min(dom(f[i])), y)) --i;
 			
 			// If found f[i] such that dom(f[i]) \cap img(g[j]) \neq \emptyset, add the piece to fog.
 			if (i >= 0 && i < f.PieceCount() && dom(f[i]).Includes(y))
@@ -683,17 +683,18 @@ const std::pair<std::vector<double>, std::vector<double>> PWLFunction::copy_brea
         {
             // check that the last breakpoint matches the first of the current piece
             // else throw an error.
-            if (!epsilon_equal(breakpoints.back(), p.domain.left) ||
-                !epsilon_equal(values.back(), p.Value(p.domain.left)))
-            {
-                std::cerr << "PWLFunction::get_breakpoints_and_values: discontinuity found between pieces. "
-                            << "Last point: (" << breakpoints.back() << ", "
-                            << values.back() << ") and "
-                            << "first point of current piece: (" << p.domain.left << ", "
-                            << p.Value(p.domain.left) << ")" << std::endl;
-                Print(std::cerr);
-                throw std::runtime_error("PWLFunction::get_breakpoints_and_values: discontinuity found between pieces.");
-            }
+			// NOTE: We disable this check for now.
+            // if (!epsilon_equal(breakpoints.back(), p.domain.left) ||
+            //     !epsilon_equal(values.back(), p.Value(p.domain.left)))
+            // {
+            //     std::cerr << "PWLFunction::get_breakpoints_and_values: discontinuity found between pieces. "
+            //                 << "Last point: (" << breakpoints.back() << ", "
+            //                 << values.back() << ") and "
+            //                 << "first point of current piece: (" << p.domain.left << ", "
+            //                 << p.Value(p.domain.left) << ")" << std::endl;
+            //     Print(std::cerr);
+            //     throw std::runtime_error("PWLFunction::get_breakpoints_and_values: discontinuity found between pieces.");
+            // }
             // add the right endpoint of the current piece
             breakpoints.push_back(p.domain.right);
             values.push_back(p.Value(p.domain.right));

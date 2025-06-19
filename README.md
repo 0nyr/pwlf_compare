@@ -22,5 +22,5 @@ Use `compile.py` for automated compilation.
 
 ##### Run
 
-`valgrind --leak-check=full --show-reachable=yes python3 src/main.py`: Run in debug mode.
+`python src/main.py`: Classic run.
 `valgrind --leak-check=full --show-reachable=yes python3 src/main.py &> valgrind_exec.log`: Run in debug mode and store valgrind outputs into a log file.

@@ -6,7 +6,7 @@ from utils.utils import get_a_parent_dir
 
 PROJECT_ROOT = get_a_parent_dir(os.path.dirname(__file__), 1)
 
-PWLF_BUILD_TYPE = "release" # "debug" or "release"
+PWLF_BUILD_TYPE = "debug" # "debug" or "release"
 PWLF_DIR = os.path.join(
     PROJECT_ROOT,
     f"build/{PWLF_BUILD_TYPE}"
@@ -41,7 +41,6 @@ import pwlf_cpp
 
 # Generate a plot of a 2D PWL function
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
 import sys
 import time
@@ -562,14 +561,15 @@ def benchmark_pwl_function_implementation(
             #     goc_composed_function.copy_breakpoints_and_values()
             # )
 
-            # plot_goc_pwl_function(
-            #     pwl_function=goc_composed_function,
-            #     plot_subname="goc_composed"
-            # )
-            # plot_nyr_cpwlf_function(
-            #     cpwlf_function=nyr_composed_function,
-            #     plot_subname="nyr_composed"
-            # )
+            if num_breakpoints == 6 and chain_length == 50:
+                plot_goc_pwl_function(
+                    pwl_function=goc_composed_function,
+                    plot_subname="goc_composed"
+                )
+                plot_nyr_cpwlf_function(
+                    cpwlf_function=nyr_composed_function,
+                    plot_subname="nyr_composed"
+                )
 
             #print(goc_composed_function.copy_breakpoints_and_values())
 
@@ -635,8 +635,8 @@ def benchmark_pwl_function_implementation(
 
 
 benchmark_pwl_function_implementation(
-    composition_chain_lengths=[5, 10, 20],
-    pwlf_nb_breakpoints=[6, 11],
+    composition_chain_lengths=[5, 10, 20, 50],
+    pwlf_nb_breakpoints=[6, 11, 21, 51, 101, 1001],
     check_functions=True,
     non_decreasing=True
 )
