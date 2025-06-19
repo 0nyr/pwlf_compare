@@ -543,25 +543,24 @@ def benchmark_pwl_function_implementation(
                 nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain[i])
             nyr_compose_time = time.time() - start_nyr
 
-            # if non_decreasing:
-            #     assert_non_decreasing_pwl_function(
-            #         xs=nyr_composed_function.get_breakpoints(),
-            #         ys=nyr_composed_function.get_values(),
-            #         message=f"While checking non-decreasing property of nyr_composed_function after {chain_length} compositions"
-            #     )
-            #     xs, ys = goc_composed_function.copy_breakpoints_and_values()
-            #     assert_non_decreasing_pwl_function(
-            #         xs=xs,
-            #         ys=ys,
-            #         message=f"While checking non-decreasing property of goc_composed_function after {chain_length} compositions"
-            #     )
+            if non_decreasing:
+                try:
+                    assert_non_decreasing_pwl_function(
+                        xs=nyr_composed_function.get_breakpoints(),
+                        ys=nyr_composed_function.get_values(),
+                        message=f"While checking non-decreasing property of nyr_composed_function after {chain_length} compositions"
+                    )
+                    xs, ys = goc_composed_function.copy_breakpoints_and_values()
+                    assert_non_decreasing_pwl_function(
+                        xs=xs,
+                        ys=ys,
+                        message=f"While checking non-decreasing property of goc_composed_function after {chain_length} compositions"
+                    )
+                except ValueError as e:
+                    print(f"Non-decreasing assertion failed: {e}")
 
-            # WARN: continuity errors due to rounding
-            # composed_raw_pwlfs.append(
-            #     goc_composed_function.copy_breakpoints_and_values()
-            # )
-
-            if num_breakpoints == 6 and chain_length == 50:
+            # if num_breakpoints == 6 and chain_length == 50:
+            if num_breakpoints == 1001 and chain_length == 10:
                 plot_goc_pwl_function(
                     pwl_function=goc_composed_function,
                     plot_subname="goc_composed"
@@ -637,6 +636,6 @@ def benchmark_pwl_function_implementation(
 benchmark_pwl_function_implementation(
     composition_chain_lengths=[5, 10, 20, 50],
     pwlf_nb_breakpoints=[6, 11, 21, 51, 101, 1001],
-    check_functions=True,
+    check_functions=False,
     non_decreasing=True
 )

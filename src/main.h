@@ -806,6 +806,147 @@ public:
 	std::size_t memory_footprint_bytes() const;	
 };
 
+/**
+ * ### Non-Decreasing Continuous Piecewise Linear Function (CPWLF).
+ * 
+ * This class represents a non-decreasing continuous piecewise linear function.
+ * It is defined by a set of breakpoints and corresponding values.
+ * The function is continuous and linear between each pair of 
+ * consecutive breakpoints. Note that its slope is always non-negative
+ * and can be infinite between two breakpoints (step function).
+ * 
+ * Note that the function is stored normalized. A function is 
+ * normalized iif no two consecutive pieces have the same
+ * slope, intercept, and share the end and beginning of their domains.
+ * 
+ * Contains `p` pieces for `b = p + 1` breakpoints.
+ */
+class NDCPWLF : public goc::Printable {
+
+private:
+    std::vector<double> xs_; // Sorted x-values
+    std::vector<double> ys_; // Corresponding (sorted) y-values
+    // NOTE: No need to store domain_ and image_ since they are obtained in O(1) from xs_ and ys_.
+
+public:
+    // Returns: f(x)=x with the specific domain.
+	static NDCPWLF make_identity(goc::Interval domain);
+
+    // Constructor for 2D continuous piecewise linear function
+    // Precondition: The list of breakpoints must be sorted and unique.
+	// Precondition: The values must be non-decreasing, but not necessarily unique (step function case).
+    NDCPWLF(
+        const std::vector<double>& breakpoints,
+        const std::vector<double>& values
+    );
+
+    // Return empty
+    NDCPWLF() = default;
+
+    // Returns true if the function is empty (no pieces).
+    bool empty() const;
+
+    // Returns the number of pieces in the function.
+    size_t nb_pieces() const;
+
+    // O(log n) evaluation using binary search and linear interpolation
+    // Throws std::out_of_range if x is outside the domain.
+    // Precondition: x \in dom(f)
+    double evaluate(double x) const;
+	
+	// Returns: the evaluation of the piece that includes x in its domain.
+	// Exception: if no piece includes x in its domain, it throws an exception.
+	// Note that if x is the domain value of a step, it returns the smallest value of the step.
+	double operator()(double x) const;
+
+    // Checks if the function is well-formed. 
+	// Check that the function is non-decreasing.
+    bool check_invariant() const;
+
+	// Checks if the function is normalized.
+	bool check_normalization() const;
+
+	// Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
+	// Observation: the domain of the new function are those x such that g(x) \in dom(f).
+	// Note that the composition of 2 NDCPWLFs is necessarily another NDCPWLF (theorem 3, Visser et al. 2020)
+    NDCPWLF compose(const NDCPWLF& g) const;
+
+    goc::PWLFunction to_goc_pwl_function() const;
+
+    void Print(std::ostream& os) const;
+
+    // Getters
+    inline double get_min_domain() const {
+		return xs_.empty() ? goc::INFTY : xs_.front();
+	}
+    inline double get_max_domain() const {
+		return xs_.empty() ? -goc::INFTY : xs_.back();
+	}
+	inline double get_min_image() const {
+		return ys_.empty() ? goc::INFTY : ys_.front();
+	}
+	inline double get_max_image() const {
+		return ys_.empty() ? -goc::INFTY : ys_.back();
+	}
+
+    const std::vector<double>& get_breakpoints() const { return xs_; }
+    const std::vector<double>& get_values() const { return ys_; }	
+	const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const {
+		return {xs_, ys_};
+	}
+
+    // Returns: if the function equals another function.
+    bool operator==(const NDCPWLF& other) const;
+
+	// Returns the total memory footprint of *this* object, in bytes,
+	// including both the fixed‐size portion (sizeof(*this)) and any
+	// heap allocations (e.g. std::vector buffers).
+	std::size_t memory_footprint_bytes() const;	
+};
+
+/// “Is empty” in the same sense as Interval::Empty().
+inline bool interval_vector_empty(const std::vector<double>& v) {
+    // we treat empty vector or front()>back() as “empty interval”
+    return v.empty() || goc::epsilon_bigger(v.front(), v.back());
+}
+
+/// Single‐point interval?
+inline bool interval_vector_is_point(const std::vector<double>& v) {
+    return !v.empty() && goc::epsilon_equal(v.front(), v.back());
+}
+
+/// Returns: true if values is within the domain.
+/// Precondition: the vector is sorted and has at least 1 element.
+inline bool interval_vector_includes(
+	const std::vector<double>& v,
+	const double value
+) {
+	return !v.empty() &&
+			goc::epsilon_smaller_equal(v.front(), value) &&
+		   	goc::epsilon_smaller_equal(value, v.back());
+}
+
+/// Does [v] sit inside [w]?
+inline bool interval_vector_is_included_in(
+    const std::vector<double>& v,
+    const std::vector<double>& w
+) {
+    if (v.empty()) return true; // empty is subset of anything
+    if (w.empty()) return false; // non-empty is not subset of empty
+    return goc::epsilon_bigger_equal(v.front(), w.front())
+        && goc::epsilon_smaller_equal(v.back(),  w.back());
+}
+
+/// Do [v] and [w] overlap at all?
+inline bool interval_vector_intersects(
+    const std::vector<double>& v,
+    const std::vector<double>& w
+) {
+	if (v.empty() || w.empty()) return false; // empty intervals do not intersect
+	return !(goc::epsilon_smaller(v.back(), w.front()) ||
+			 goc::epsilon_bigger(v.front(), w.back()));
+}
+
 
 } // namespace nyr
 // #################### NAMESPACE END ####################

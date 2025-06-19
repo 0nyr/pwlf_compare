@@ -1325,6 +1325,70 @@ std::size_t nyr::CPWLF::memory_footprint_bytes() const {
          + breakpoints_.capacity() * sizeof(double)
          + values_.capacity()      * sizeof(double);
 }
+
+// ########## SEPARATOR ##########
+
+// Check if function is empty
+bool nyr::NDCPWLF::empty() const {
+    return xs_.empty();
+}
+
+nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
+	const auto& f = *this;
+
+	// 1. Pre-check
+	// If either function is empty, or if the image of g does not intersect the domain
+	// of f, the composition is an empty function.
+	if (f.empty() || g.empty() ||
+		// check if the image of g intersects the domain of f
+		// Not ( g.max_img] [f.min_dom or f.max_dom] [g.min_img )
+		!(goc::epsilon_smaller(g.ys_.back(), f.xs_.front()) || goc::epsilon_bigger(g.ys_.front(), f.xs_.back()))
+	) {
+		return nyr::NDCPWLF(); // Return empty function
+	}
+
+	std::vector<double> fog_xs;
+	std::vector<double> fog_ys;
+	// By theorem, fog has at most f.xs_.size() * g.ys_.size() points.
+	// So reserve space for the worst case, and shrink later.
+	fog_xs.reserve(f.xs_.size() * g.ys_.size());
+	fog_ys.reserve(f.xs_.size() * g.ys_.size());
+	unsigned int nb_points = 0;
+
+	// Steps 1 and 2: Find all points P'(x', y') in fog.
+	// NOTE: Since fog is a NDCPWLF, we can add x' and y' in any order
+	// then sort fog_xs and fog_ys at the end.
+
+	// 2. Iterate over g points (forward: x' given, need to compute y')
+	// Each point P(x, y) in g such that y \in f.domain adds (at least) a point to fog
+	// Edge case 1: If f(y) corresponds to a step (vertical segment) on f, add 2 points to fog corresponding to the segment endpoints.
+	for (size_t i = 0; i < g.ys_.size(); ++i)
+	{
+		double y = g.ys_[i];
+		if (!interval_vector_includes(f.xs_, y)) continue; // If y is not in f's domain, skip
+
+		// Find the piece of f that contains y
+		// Here, it consists in finding the first index j such that f.xs_[j] <= y <= f.xs_[j+1
+
+
+		// If the piece is horizontal, add both endpoints
+
+		// Otherwise, compute the x value corresponding to y
+		
+	}
+
+	// 3. Iterate over f points: (backward: y' given, need to compute x')
+	// Each point P(x, y) in f such that x \in g.image adds (a maximum of) a point to fog
+	// Edge case 1: If x corresponds to a step (vertical segment) on g, then this point has already been added in the previous step (continue)
+	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then this point has already been added in the previous step (continue)
+
+	// 4. Sort fog_xs and fog_ys
+
+	return nyr::NDCPWLF(fog_xs, fog_ys);
+}
+
+
+
 // #################### NAMESPACE END ####################
 
 } // namespace nyr

@@ -6,4 +6,4 @@ vgcore.*
 **/__pycache__
 
 plots
-
+*.log
