@@ -4,12 +4,13 @@ import random
 
 from utils.utils import get_a_parent_dir
 
+PROJECT_ROOT = get_a_parent_dir(os.path.dirname(__file__), 1)
 PWLF_DIR = os.path.join(
-    os.path.dirname(__file__),
-    "build"
+    PROJECT_ROOT,
+    "build/debug"
 )
 PLOT_DIR = os.path.join(
-    get_a_parent_dir(os.path.dirname(__file__), 1),
+    PROJECT_ROOT,
     "plots"
 )
 RANDOM_SEED = 42
@@ -21,19 +22,19 @@ sys.path.append(PWLF_DIR)  # or wherever the .so is
 import pwlf_cpp
 
 
-# Create intervals
-interval = pwlf_cpp.goc.Interval(0.0, 10.0)
+# # Create intervals
+# interval = pwlf_cpp.goc.Interval(0.0, 10.0)
 
-# Create PWL functions
-breakpoints = [0.0, 1.0, 2.0, 3.0]
-values = [0.0, 2.0, 1.0, 3.0]
-pwl = pwlf_cpp.goc.PWLFunction(breakpoints, values)
+# # Create PWL functions
+# breakpoints = [0.0, 1.0, 2.0, 3.0]
+# values = [0.0, 2.0, 1.0, 3.0]
+# pwl = pwlf_cpp.goc.PWLFunction(breakpoints, values)
 
-# Use CPWLF from nyr namespace
-cpwlf = pwlf_cpp.nyr.CPWLF(breakpoints, values)
+# # Use CPWLF from nyr namespace
+# cpwlf = pwlf_cpp.nyr.CPWLF(breakpoints, values)
 
-print("Result of PWL evaluation at 1.5:", pwl(1.5))
-print("Result of CPWLF evaluation at 1.5:", cpwlf(1.5))
+# print("Result of PWL evaluation at 1.5:", pwl(1.5))
+# print("Result of CPWLF evaluation at 1.5:", cpwlf(1.5))
 
 
 # Generate a plot of a 2D PWL function
@@ -346,12 +347,12 @@ def benchmark_pwl_function_implementation(
             print(f"nyr_functions_for_chain[{i}].check_normalization(): {nyr_norm}")
 
     # Plot all the goc functions
-    plot_raw_pwl_functions(
-        list_of_tuple_breakpoints_and_values=[
-            goc_function.copy_breakpoints_and_values() for goc_function in goc_functions_for_chain
-        ],
-        plot_subname="goc_chain"
-    )
+    # plot_raw_pwl_functions(
+    #     list_of_tuple_breakpoints_and_values=[
+    #         goc_function.copy_breakpoints_and_values() for goc_function in goc_functions_for_chain
+    #     ],
+    #     plot_subname="goc_chain"
+    # )
 
     # 2. Perform compositions
     df = pd.DataFrame()

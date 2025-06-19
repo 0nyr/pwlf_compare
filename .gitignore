@@ -1,7 +1,9 @@
 # Ignore build artifacts
-src/build
+build
+vgcore.*
 
 # Ignore python execution files
 **/__pycache__
 
 plots
+
