@@ -5,9 +5,11 @@ import random
 from utils.utils import get_a_parent_dir
 
 PROJECT_ROOT = get_a_parent_dir(os.path.dirname(__file__), 1)
+
+PWLF_BUILD_TYPE = "release" # "debug" or "release"
 PWLF_DIR = os.path.join(
     PROJECT_ROOT,
-    "build/debug"
+    f"build/{PWLF_BUILD_TYPE}"
 )
 PLOT_DIR = os.path.join(
     PROJECT_ROOT,
@@ -265,6 +267,58 @@ def normalize_raw_pwl_function(
 
     return normalized_x, normalized_y
 
+def make_bounded_slope(
+    xs: list,
+    ys: list,
+    min_slope: float = -1.0,
+    max_slope: float = 1e6
+):
+    """
+    Given a 2D PWL function defined by x_breakpoints and y_values,
+    ensure that the slope between each pair of consecutive points is bounded.
+    First and last points are not modified. 
+    
+    For each segment i>0, slope_i = (y_i' - y_{i-1}')/(x_i - x_{i-1})
+    is clamped to [min_slope, max_slope].
+
+    We build left-to-right. Whenever the "raw" (y_i - y_{i-1}')/(dx) is out of bounds,
+    we set y_i' = y_{i-1}' + clamp(slope_raw) * dx.
+    """
+
+    if len(xs) != len(ys):
+        raise ValueError("xs and ys must have the same length")
+
+    new_xs: list[float] = []
+    new_ys: list[float] = []
+    # first point is always kept
+    new_xs.append(xs[0])  
+    new_ys.append(ys[0])
+
+    for x_i, y_i_orig in zip(xs[1:], ys[1:]):
+        x_prev, y_prev = new_xs[-1], new_ys[-1]
+        dx = x_i - x_prev
+        if dx <= 0:
+            raise ValueError(f"Non-increasing breakpoint: {x_prev} → {x_i}")
+
+        raw_slope = (y_i_orig - y_prev) / dx
+        # clamp the slope into [min_slope, max_slope]
+        bounded_slope = min(max(raw_slope, min_slope), max_slope)
+
+        # WARN: Due to rounding imprecision, when the slope is almost 0.0
+        # prefer to copy y_prev instead of computing y_i = y_prev + 0.0 * dx
+        if pwlf_cpp.goc.epsilon_equal(bounded_slope, 0.0):
+            y_i = y_prev
+        # if we had to clamp, recompute y_i'; else keep original y_i_orig
+        elif bounded_slope != raw_slope:
+            y_i = y_prev + bounded_slope * dx
+        else:
+            y_i = y_i_orig
+
+        new_xs.append(x_i)
+        new_ys.append(y_i)
+
+    return normalize_raw_pwl_function(new_xs, new_ys)
+
 def generate_random_raw_pwl_function(
     num_breakpoints: int = 10,
     x_min: float = 10.0,
@@ -278,6 +332,9 @@ def generate_random_raw_pwl_function(
     consecutive pieces have the same slope, intercept, and share the end and beginning 
     of their domains.
     """
+    if num_breakpoints < 2:
+        raise ValueError("num_breakpoints must be at least 2 for a non-decreasing PWL function")
+
     x_breakpoints = sorted(random.sample(
         [random.uniform(x_min, x_max) for _ in range(num_breakpoints)],
         num_breakpoints
@@ -288,6 +345,79 @@ def generate_random_raw_pwl_function(
         x_breakpoints=x_breakpoints,
         y_values=y_values
     )
+
+def make_non_decreasing_pwl_function(
+    xs: list[float],
+    ys: list[float],
+):
+    """
+    Given a 2D PWL function defined by xs and ys, ensure that the function is non-decreasing.
+    Only the first point is not modified.
+    We compute f'(x) = f(x) + x
+    """
+
+    # Bound the slope to ensure non-decreasing property
+    bounded_slope_xs, bounded_slope_ys = make_bounded_slope(
+        xs=xs,
+        ys=ys,
+    )
+    # Ensure the function is non-decreasing
+    for i in range(1, len(bounded_slope_ys)):
+        x = bounded_slope_xs[i]
+        y_new = x + bounded_slope_ys[i]
+
+        # WARN: due to rounding imprecision, when the 2 consecutive y values are almost equal,
+        # prefer to copy the previous y value instead of computing it.
+        y_prev = bounded_slope_ys[i-1]
+        if pwlf_cpp.goc.epsilon_equal(y_new, y_prev):
+            bounded_slope_ys[i] = y_prev
+        else:
+            bounded_slope_ys[i] = y_new
+
+    return normalize_raw_pwl_function(
+        x_breakpoints=bounded_slope_xs,
+        y_values=bounded_slope_ys
+    )
+
+def generate_non_decreasing_raw_pwl_function(
+    num_breakpoints: int = 10,
+    x_min: float = 0.0,
+    x_max: float = 100.0,
+    y_min: float = 1.0,
+    y_max: float = 10.0
+):
+    """
+    Generate a non-decreasing PWL function with specified number of breakpoints and value ranges.
+    The function is normalized.
+    """
+    xs, ys = generate_random_raw_pwl_function(
+        num_breakpoints=num_breakpoints,
+        x_min=x_min,
+        x_max=x_max,
+        y_min=y_min,
+        y_max=y_max
+    )
+    return make_non_decreasing_pwl_function(
+        xs=xs,
+        ys=ys
+    )
+
+def assert_non_decreasing_pwl_function(
+    xs: list[float],
+    ys: list[float],
+    message: str = ""
+):
+    """
+    Assert that the given PWL function defined by xs and ys is non-decreasing.
+    """
+    if len(xs) != len(ys):
+        raise ValueError(f"{message}: xs and ys must have the same length")
+
+    for i in range(1, len(xs)):
+        if xs[i] <= xs[i-1]:
+            raise ValueError(f"{message}: Non-increasing breakpoint: {xs[i-1]} → {xs[i]}")
+        if ys[i] < ys[i-1]:
+            raise ValueError(f"{message}: Non-decreasing violation at index {i}: {ys[i-1]} → {ys[i]}")
 
 def get_size_in_bytes(obj):
     """
@@ -301,122 +431,212 @@ def get_size_in_bytes(obj):
         # Fallback: Python object size (not accurate for C++ objects)
         return sys.getsizeof(obj)
 
+def test_bounded_slope_pwl_generation():
+    functions: list[tuple[list, list]] = [
+        (generate_random_raw_pwl_function(
+            num_breakpoints=40,
+            x_min=0.0,
+            x_max=100.0,
+            y_min=1.0,
+            y_max=10.0
+        ))
+    ]
+    functions.append(
+        make_bounded_slope(
+            xs=functions[0][0],
+            ys=functions[0][1]
+        )
+    )
+    functions.append(
+        make_non_decreasing_pwl_function(
+            xs=functions[0][0],
+            ys=functions[0][1]
+        )
+    )   
+            
+    plot_raw_pwl_functions(
+        list_of_tuple_breakpoints_and_values=functions,
+        plot_subname="slope_bounding_example"
+    )
+
 def benchmark_pwl_function_implementation(
         composition_chain_lengths: list[int],
+        pwlf_nb_breakpoints: list[int],
         check_functions: bool = False,
+        non_decreasing: bool = False,
+        num_breakpoints: int = 6
     ):
     """
     Benchmark the PWL function implementation by creating a chain
     of PWL functions and measuring the time and memory usage.
     """
-
-    # 1. Generate a chain of PWL functions
-    max_chain_length = max(composition_chain_lengths)
-    goc_functions_for_chain = []
-    nyr_functions_for_chain = []
-
-    for i in range(max_chain_length):
-        x_breakpoints, y_values = generate_random_raw_pwl_function(
-            num_breakpoints=6,
-        )
-        plot_subname = f"random-{i}-breakpoints-{len(x_breakpoints)}"
-        # plot_raw_pwl_function(
-        #     x_breakpoints=x_breakpoints,
-        #     y_values=y_values,
-        #     plot_subname=plot_subname
-        # )
-
-        goc_functions_for_chain.append(
-            pwlf_cpp.goc.PWLFunction(x_breakpoints, y_values)
-        )
-        nyr_functions_for_chain.append(
-            pwlf_cpp.nyr.CPWLF(x_breakpoints, y_values)
-        )
-
-    # Check all the functions
-    if check_functions:
-        print("Checking invariants and normalization for all functions in the chain:")
-        for i in range(max_chain_length):
-            goc_inv = goc_functions_for_chain[i].check_invariant()
-            print(f"goc_functions_for_chain[{i}].check_invariant(): {goc_inv}")
-            goc_norm = goc_functions_for_chain[i].check_normalization()
-            print(f"goc_functions_for_chain[{i}].check_normalization(): {goc_norm}")
-            nyr_inv = nyr_functions_for_chain[i].check_invariant()
-            print(f"nyr_functions_for_chain[{i}].check_invariant(): {nyr_inv}")
-            nyr_norm = nyr_functions_for_chain[i].check_normalization()
-            print(f"nyr_functions_for_chain[{i}].check_normalization(): {nyr_norm}")
-
-    # Plot all the goc functions
-    # plot_raw_pwl_functions(
-    #     list_of_tuple_breakpoints_and_values=[
-    #         goc_function.copy_breakpoints_and_values() for goc_function in goc_functions_for_chain
-    #     ],
-    #     plot_subname="goc_chain"
-    # )
-
-    # 2. Perform compositions
     df = pd.DataFrame()
 
-    for chain_length in composition_chain_lengths:
-        # Chain composition for goc
-        goc_composed_function = goc_functions_for_chain[0]
-        start_goc = time.time()
-        for i in range(1, chain_length):
-            goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
-        goc_compose_time = time.time() - start_goc
+    for num_breakpoints in pwlf_nb_breakpoints:
 
-        # Chain composition for nyr
-        nyr_composed_function = nyr_functions_for_chain[0]
-        start_nyr = time.time()
-        for i in range(1, chain_length):
-            nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain[i])
-        nyr_compose_time = time.time() - start_nyr
+        # 1. Generate a chain of PWL functions
+        max_chain_length = max(composition_chain_lengths)
+        goc_functions_for_chain = []
+        nyr_functions_for_chain = []
 
-        # WARN: continuity errors due to rounding
-        # composed_raw_pwlfs.append(
-        #     goc_composed_function.copy_breakpoints_and_values()
+        for i in range(max_chain_length):
+            if non_decreasing:
+                x_breakpoints, y_values = generate_non_decreasing_raw_pwl_function(
+                    num_breakpoints=num_breakpoints
+                )
+                assert_non_decreasing_pwl_function(
+                    xs=x_breakpoints,
+                    ys=y_values,
+                    message=f"While generating non-decreasing PWL function no. {i+1}"
+                )
+            else:
+                x_breakpoints, y_values = generate_random_raw_pwl_function(
+                num_breakpoints=num_breakpoints,
+            )
+            # plot_subname = f"random-{i}-breakpoints-{len(x_breakpoints)}"
+            # plot_raw_pwl_function(
+            #     x_breakpoints=x_breakpoints,
+            #     y_values=y_values,
+            #     plot_subname=plot_subname
+            # )
+
+            goc_functions_for_chain.append(
+                pwlf_cpp.goc.PWLFunction(x_breakpoints, y_values)
+            )
+            nyr_functions_for_chain.append(
+                pwlf_cpp.nyr.CPWLF(x_breakpoints, y_values)
+            )
+
+        # Check all the functions
+        if check_functions:
+            print("Checking invariants and normalization for all functions in the chain:")
+            for i in range(max_chain_length):
+                goc_inv = goc_functions_for_chain[i].check_invariant()
+                print(f"goc_functions_for_chain[{i}].check_invariant(): {goc_inv}")
+                goc_norm = goc_functions_for_chain[i].check_normalization()
+                print(f"goc_functions_for_chain[{i}].check_normalization(): {goc_norm}")
+                nyr_inv = nyr_functions_for_chain[i].check_invariant()
+                print(f"nyr_functions_for_chain[{i}].check_invariant(): {nyr_inv}")
+                nyr_norm = nyr_functions_for_chain[i].check_normalization()
+                print(f"nyr_functions_for_chain[{i}].check_normalization(): {nyr_norm}")
+
+        # Plot all the goc functions
+        # plot_raw_pwl_functions(
+        #     list_of_tuple_breakpoints_and_values=[
+        #         goc_function.copy_breakpoints_and_values() for goc_function in goc_functions_for_chain
+        #     ],
+        #     plot_subname="goc_chain"
         # )
 
-        # plot_goc_pwl_function(
-        #     pwl_function=goc_composed_function,
-        #     plot_subname="goc_composed"
-        # )
-        # plot_nyr_cpwlf_function(
-        #     cpwlf_function=nyr_composed_function,
-        #     plot_subname="nyr_composed"
-        # )
+        # 2. Perform compositions
+        for chain_length in composition_chain_lengths:
+            # Chain composition for goc
+            goc_composed_function = goc_functions_for_chain[0]
+            start_goc = time.time()
+            for i in range(1, chain_length):
+                goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
+            goc_compose_time = time.time() - start_goc
 
-        #print(goc_composed_function.copy_breakpoints_and_values())
+            # Chain composition for nyr
+            nyr_composed_function = nyr_functions_for_chain[0]
+            start_nyr = time.time()
+            for i in range(1, chain_length):
+                nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain[i])
+            nyr_compose_time = time.time() - start_nyr
 
-        # Gather stats
-        stats = {
-            "Chain Length": chain_length,
-            "Function": ["goc_composed", "nyr_composed"],
-            "Num Pieces": [
-                goc_composed_function.piece_count(),
-                nyr_composed_function.nb_pieces()
-            ],
-            "Memory Used (Bytes)": [
-                get_size_in_bytes(goc_composed_function),
-                get_size_in_bytes(nyr_composed_function)
-            ],
-            "Compose Time (s)": [
-                goc_compose_time,
-                nyr_compose_time
-            ]
-        }
+            # if non_decreasing:
+            #     assert_non_decreasing_pwl_function(
+            #         xs=nyr_composed_function.get_breakpoints(),
+            #         ys=nyr_composed_function.get_values(),
+            #         message=f"While checking non-decreasing property of nyr_composed_function after {chain_length} compositions"
+            #     )
+            #     xs, ys = goc_composed_function.copy_breakpoints_and_values()
+            #     assert_non_decreasing_pwl_function(
+            #         xs=xs,
+            #         ys=ys,
+            #         message=f"While checking non-decreasing property of goc_composed_function after {chain_length} compositions"
+            #     )
 
-        df_current_stats = pd.DataFrame(stats)
-        print(df_current_stats.to_markdown(index=False))
-        df = pd.concat(
-            [df, pd.DataFrame(stats)],
-            ignore_index=True
-        )
+            # WARN: continuity errors due to rounding
+            # composed_raw_pwlfs.append(
+            #     goc_composed_function.copy_breakpoints_and_values()
+            # )
 
-    # 3. Print the full results    
+            # plot_goc_pwl_function(
+            #     pwl_function=goc_composed_function,
+            #     plot_subname="goc_composed"
+            # )
+            # plot_nyr_cpwlf_function(
+            #     cpwlf_function=nyr_composed_function,
+            #     plot_subname="nyr_composed"
+            # )
+
+            #print(goc_composed_function.copy_breakpoints_and_values())
+
+            # Gather stats
+            stats = {
+                "Start nb pieces": [
+                    goc_functions_for_chain[0].piece_count(),
+                    nyr_functions_for_chain[0].nb_pieces()
+                ],
+                "Chain Length": chain_length,
+                "Function": ["goc_composed", "nyr_composed"],
+                "Num Pieces": [
+                    goc_composed_function.piece_count(),
+                    nyr_composed_function.nb_pieces()
+                ],
+                "Memory Used (Bytes)": [
+                    get_size_in_bytes(goc_composed_function),
+                    get_size_in_bytes(nyr_composed_function)
+                ],
+                "Compose Time (s)": [
+                    goc_compose_time,
+                    nyr_compose_time
+                ]
+            }
+
+            df_current_stats = pd.DataFrame(stats)
+            print(df_current_stats.to_markdown(index=False))
+            df = pd.concat(
+                [df, pd.DataFrame(stats)],
+                ignore_index=True
+            )
+
+    # 3. Print the full results
+    print("\nFull benchmark results:")
     print(df.to_markdown(index=False))
+
+    # 5. Print total time and memory usage for each implementation
+    print("\nPWLF type:", "non-decreasing" if non_decreasing else "raw")
+    total_time_goc = df[df["Function"] == "goc_composed"]["Compose Time (s)"].sum()
+    total_time_nyr = df[df["Function"] == "nyr_composed"]["Compose Time (s)"].sum()
+    total_memory_goc = df[df["Function"] == "goc_composed"]["Memory Used (Bytes)"].sum()
+    total_memory_nyr = df[df["Function"] == "nyr_composed"]["Memory Used (Bytes)"].sum()
+    print("Total time and memory usage:")
+    print(f"Total Time GOC: {total_time_goc} s")
+    print(f"Total Time NYR: {total_time_nyr} s")
+    print(f"Total Memory GOC: {total_memory_goc} Bytes")
+    print(f"Total Memory NYR: {total_memory_nyr} Bytes")
+
+    # Print fastest, and most memory-efficient implementation
+    if total_time_goc < total_time_nyr:
+        print("GOC implementation is faster.")
+    elif total_time_nyr < total_time_goc:
+        print("NYR implementation is faster.")
+    else:
+        print("Both implementations have the same execution time.")
+
+    if total_memory_goc < total_memory_nyr:
+        print("GOC implementation is more memory-efficient.")
+    elif total_memory_nyr < total_memory_goc:
+        print("NYR implementation is more memory-efficient.")
+    else:
+        print("Both implementations use the same amount of memory.")
 
 
 benchmark_pwl_function_implementation(
-    composition_chain_lengths=[5, 10, 20, 50]
+    composition_chain_lengths=[5, 10, 20],
+    pwlf_nb_breakpoints=[6, 11],
+    check_functions=True,
+    non_decreasing=True
 )
