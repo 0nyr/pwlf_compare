@@ -18,3 +18,8 @@ Run:
 python src/main.py
 ```
 
+Use `compile.py` for automated compilation.
+
+##### Run
+
+`valgrind --leak-check=full --show-reachable=yes python3 src/main.py`: Run in debug mode.

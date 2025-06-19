@@ -505,7 +505,7 @@ double PWLFunction::PreValue(double y) const
 
 PWLFunction PWLFunction::Compose(const PWLFunction& g) const
 {
-	PWLFunction fog;
+	PWLFunction fog; // fog is the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
 	
 	auto& f = *this;
 	int i = 0;
@@ -535,7 +535,7 @@ PWLFunction PWLFunction::Compose(const PWLFunction& g) const
 			while (i < f.PieceCount() && epsilon_smaller(max(dom(f[i])), min(img(g[j])))) ++i;
 			
 			// For each piece f[i] such that dom(f[i]) \cap img(g[j]) \neq \emptyset
-			for (; i < PieceCount() && dom(f[i]).Intersects(img(g[j])); ++i)
+			for (; i < f.PieceCount() && dom(f[i]).Intersects(img(g[j])); ++i)
 			{
 				// Find intersection.
 				Interval inter = dom(f[i]).Intersection(img(g[j]));
@@ -548,10 +548,10 @@ PWLFunction PWLFunction::Compose(const PWLFunction& g) const
 		{
 			// Find last piece f[i] such that min(dom(f[i])) <= max(img(g[j])).
 			while (i < f.PieceCount()-1 && epsilon_smaller_equal(min(dom(f[i+1])), max(img(g[j])))) ++i;
-			while (i >= 0 && epsilon_bigger(min(dom(f[i])), max(img(g[j])))) --i;
+			while (i > 0 && epsilon_bigger(min(dom(f[i])), max(img(g[j])))) --i;
 			
 			// For each piece f[i] such that dom(f[i]) \cap img(g[j]) \neq \emptyset
-			for (; i >= 0 && dom(f[i]).Intersects(img(g[j])); --i)
+			for (; i >= 0 && i < f.PieceCount() && dom(f[i]).Intersects(img(g[j])); --i)
 			{
 				// Find intersection.
 				Interval inter = dom(f[i]).Intersection(img(g[j]));
