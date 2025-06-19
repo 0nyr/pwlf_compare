@@ -123,6 +123,11 @@ void to_json(json& j, const Interval& i)
 	j.push_back(i.right);
 }
 
+std::size_t Interval::memory_footprint_bytes() const {
+    // just two doubles
+    return sizeof(*this);
+}
+
 // ###### SEPARATOR ##########
 
 Point2D::Point2D(double x, double y) : x(x), y(y)
@@ -144,6 +149,11 @@ void from_json(const json& j, Point2D& p)
 void to_json(json& j, const Point2D& p)
 {
 	j = vector<double>({p.x, p.y});
+}
+
+std::size_t Point2D::memory_footprint_bytes() const {
+    // just two doubles
+    return sizeof(*this);
 }
 
 // ###### SEPARATOR ##########
@@ -271,6 +281,11 @@ LinearFunction operator+(const LinearFunction& f, double a)
 LinearFunction operator*(const LinearFunction& f, double a)
 {
 	return LinearFunction(Point2D(f.domain.left, f.Value(f.domain.left)*a), Point2D(f.domain.right, f.Value(f.domain.right)*a));
+}
+
+std::size_t LinearFunction::memory_footprint_bytes() const {
+    // no dynamic members
+    return sizeof(*this);
 }
 
 // ###### SEPARATOR ##########
@@ -597,18 +612,30 @@ bool PWLFunction::check_invariant() const
 bool PWLFunction::check_normalization() const {
     if (pieces_.empty()) return domain_ == Interval(INFTY, -INFTY) && image_ == Interval(INFTY, -INFTY);
     
-    // Check that the pieces are ordered by their domain.
+    
     for (size_t i = 1; i < pieces_.size(); ++i)
     {
-        if (epsilon_bigger(pieces_[i].domain.left, pieces_[i-1].domain.right))
+        // Check that the adjacent pieces have adjacent domains.
+        if (epsilon_different(pieces_[i].domain.left, pieces_[i-1].domain.right) ||
+            epsilon_different(pieces_[i].Value(pieces_[i].domain.left), pieces_[i-1].Value(pieces_[i-1].domain.right)))
+        {
+            std::cerr << "PWLFunction::check_normalization: pieces have non-adjacent domains "
+                        << pieces_[i-1].domain << " and " << pieces_[i].domain 
+                        << " at indices " << i-1 << " and " << i
+                        << ". Values are " << pieces_[i-1].Value(pieces_[i-1].domain.right)
+                        << " and " << pieces_[i].Value(pieces_[i].domain.left)
+                        << std::endl;
             return false;
-    }
-    
-    // Check that the pieces do not overlap.
-    for (size_t i = 0; i < pieces_.size() - 1; ++i)
-    {
-        if (pieces_[i].domain.Intersects(pieces_[i+1].domain))
+        }
+        // Check that adjascent domains are of increasing values
+        if (epsilon_smaller_equal(pieces_[i].domain.right, pieces_[i-1].domain.left))
+        {
+            std::cerr << "PWLFunction::check_normalization: pieces have non-increasing domains "
+                        << pieces_[i-1].domain << " and " << pieces_[i].domain 
+                        << " at indices " << i-1 << " and " << i
+                        << std::endl;
             return false;
+        }
     }
 
     // Check that no piece is the continuation of the previous piece.
@@ -617,7 +644,12 @@ bool PWLFunction::check_normalization() const {
         if (epsilon_equal(pieces_[i-1].domain.right, pieces_[i].domain.left) &&
             epsilon_equal(pieces_[i-1].Value(pieces_[i-1].domain.right), pieces_[i].Value(pieces_[i].domain.left)) &&
             epsilon_equal(pieces_[i-1].slope, pieces_[i].slope))
-        {
+        {   
+            std::cerr << "PWLFunction::check_normalization: pieces are continuations of each other "
+                        << pieces_[i-1].domain << " and " << pieces_[i].domain 
+                        << " at indices " << i-1 << " and " << i
+                        << ". Slopes are " << pieces_[i-1].slope << " and " << pieces_[i].slope
+                        << std::endl;
             return false;
         }
     }
@@ -629,6 +661,13 @@ const std::pair<std::vector<double>, std::vector<double>> PWLFunction::copy_brea
 {
     std::vector<double> breakpoints;
     std::vector<double> values;
+
+    // If there are no pieces, return empty vectors.
+    if (pieces_.empty())
+    {
+        return {breakpoints, values}; // return empty vectors
+    }
+
     for (auto& p: pieces_)
     {
         // Note that we expect the pieces to be over a continuous domain
@@ -637,21 +676,27 @@ const std::pair<std::vector<double>, std::vector<double>> PWLFunction::copy_brea
         {
             breakpoints.push_back(p.domain.left);
             breakpoints.push_back(p.domain.right);
-            values.push_back(p.image.left);
-            values.push_back(p.image.right);
+            values.push_back(p.Value(p.domain.left));
+            values.push_back(p.Value(p.domain.right));
         }
         else
         {
             // check that the last breakpoint matches the first of the current piece
             // else throw an error.
             if (!epsilon_equal(breakpoints.back(), p.domain.left) ||
-                !epsilon_equal(values.back(), p.image.left))
+                !epsilon_equal(values.back(), p.Value(p.domain.left)))
             {
-                fail("PWLFunction::get_breakpoints_and_values: discontinuity found between pieces.");
+                std::cerr << "PWLFunction::get_breakpoints_and_values: discontinuity found between pieces. "
+                            << "Last point: (" << breakpoints.back() << ", "
+                            << values.back() << ") and "
+                            << "first point of current piece: (" << p.domain.left << ", "
+                            << p.Value(p.domain.left) << ")" << std::endl;
+                Print(std::cerr);
+                throw std::runtime_error("PWLFunction::get_breakpoints_and_values: discontinuity found between pieces.");
             }
             // add the right endpoint of the current piece
             breakpoints.push_back(p.domain.right);
-            values.push_back(p.image.right);
+            values.push_back(p.Value(p.domain.right));
         }
     }
     return {breakpoints, values};
@@ -878,6 +923,12 @@ PWLFunction Min(double a, const PWLFunction& f)
 	return Min(f, a);
 }
 
+std::size_t PWLFunction::memory_footprint_bytes() const {
+    // sizeof(*this) covers pieces_ header, any other members
+    return sizeof(*this)
+         + pieces_.capacity() * sizeof(LinearFunction);
+}
+
 } // namespace goc
 // #################### NAMESPACE END ####################
 
@@ -1085,7 +1136,11 @@ bool CPWLF::check_normalization() const {
     
     // Check that the pieces are ordered by their domain.
     for (size_t i = 1; i < breakpoints_.size(); ++i) {
-        if (goc::epsilon_bigger(breakpoints_[i], breakpoints_[i-1])) {
+        if (!goc::epsilon_bigger(breakpoints_[i], breakpoints_[i-1])) {
+            std::cerr << "Breakpoints are not sorted: " 
+                      << breakpoints_[i-1] << " >= " << breakpoints_[i] 
+                      << " at index " << i
+                      << std::endl;
             return false;
         }
     }
@@ -1105,6 +1160,10 @@ bool CPWLF::check_normalization() const {
 
         // If the slopes are not different, the current breakpoint is not necessary.
         if (goc::epsilon_equal(slope1, slope2)) {
+            std::cerr << "Breakpoints are not normalized: "
+                      << "slope1 = " << slope1 << ", slope2 = " << slope2
+                      << " at index " << i
+                      << std::endl;
             return false; 
         }
     }
@@ -1255,6 +1314,15 @@ goc::PWLFunction CPWLF::to_goc_pwl_function() const {
     }
     
     return pwlf;
+}
+
+std::size_t nyr::CPWLF::memory_footprint_bytes() const {
+    // sizeof(*this) covers: 
+    //   - domain_, image_, the two vector headers (3 pointers each on most platforms), etc.
+    // the following adds the heap‐allocated storage for both vectors:
+    return sizeof(*this)
+         + breakpoints_.capacity() * sizeof(double)
+         + values_.capacity()      * sizeof(double);
 }
 // #################### NAMESPACE END ####################
 

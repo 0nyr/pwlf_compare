@@ -39,6 +39,9 @@ print("Result of CPWLF evaluation at 1.5:", cpwlf(1.5))
 # Generate a plot of a 2D PWL function
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+import sys
+import time
 
 def plot_raw_pwl_function(
     x_breakpoints: list,
@@ -68,6 +71,90 @@ def plot_raw_pwl_function(
     # Save the plot
     
     plt.savefig(f"{PLOT_DIR}/pwl_function_plot-{plot_subname}.svg", format='svg')
+
+    plt.show()
+
+def plot_goc_pwl_function(
+    pwl_function: pwlf_cpp.goc.PWLFunction,
+    plot_subname: str
+):
+    """
+    This function is represented by a list of pieces.
+    So we need to plot each piece separately.
+    """
+    if pwl_function is None:
+        raise ValueError("pwl_function must not be None")
+    
+    fig, axs = plt.subplots(1, 1, figsize=(12, 5))
+    fig.suptitle(f"PWLFunction plot: {plot_subname}", fontsize=16)
+
+    # plot tau_ij
+    ax = axs
+    
+    domain = [pwl_function.domain().left, pwl_function.domain().right]
+    image = [pwl_function.image().left, pwl_function.image().right]
+
+    for i in range(pwl_function.piece_count()):
+        piece = pwl_function.piece(i)
+        x_breakpoints = [piece.domain.left, piece.domain.right]
+        y_values = [
+            piece(x) for x in x_breakpoints
+        ]
+        ax.plot(x_breakpoints, y_values, marker='o', label=f"Piece n°{i}")
+    
+    ax.set_title(f"PWLFunction Plot {plot_subname}. domain: {domain}, image: {image}")
+    ax.set_xlabel(f"Domain axis (breakpoints)")
+    ax.set_ylabel("Image axis (values)")
+    ax.set_xlim(left=domain[0], right=domain[1])
+    ax.set_ylim(bottom=image[0], top=image[1])
+    ax.grid(True)
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.88)
+
+    # Save the plot
+    
+    plt.savefig(f"{PLOT_DIR}/PWLFunction_plot-{plot_subname}.svg", format='svg')
+
+    plt.show()
+
+def plot_nyr_cpwlf_function(
+    cpwlf_function: pwlf_cpp.nyr.CPWLF,
+    plot_subname: str
+):
+    """
+    This function is represented by a list of breakpoints and values.
+    It is continuous over the whole domain.
+    """
+    if cpwlf_function is None:
+        raise ValueError("cpwlf_function must not be None")
+    
+    fig, axs = plt.subplots(1, 1, figsize=(12, 5))
+    fig.suptitle(f"CPWLF plot: {plot_subname}", fontsize=16)
+
+    # plot tau_ij
+    ax = axs
+    
+    domain = [cpwlf_function.get_domain().left, cpwlf_function.get_domain().right]
+    image = [cpwlf_function.get_image().left, cpwlf_function.get_image().right]
+
+    x_breakpoints = cpwlf_function.get_breakpoints()
+    y_values = cpwlf_function.get_values()
+
+    ax.plot(x_breakpoints, y_values, marker='o')
+    
+    ax.set_title(f"CPWLF Function Plot: {plot_subname}, domain: {domain}, image: {image}")
+    ax.set_xlabel(f"Domain axis (breakpoints)")
+    ax.set_ylabel("Image axis (values)")
+    ax.set_xlim(left=domain[0], right=domain[1])
+    ax.set_ylim(bottom=image[0], top=image[1])
+    ax.grid(True)
+
+    plt.tight_layout()
+    plt.subplots_adjust(top=0.88)
+
+    # Save the plot
+    plt.savefig(f"{PLOT_DIR}/CPWLF_plot-{plot_subname}.svg", format='svg')
 
     plt.show()
 
@@ -116,11 +203,11 @@ def plot_raw_pwl_functions(
 
 
 # Plot the PWL function
-plot_raw_pwl_function(
-    x_breakpoints=breakpoints,
-    y_values=values,
-    plot_subname="example"
-)
+# plot_raw_pwl_function(
+#     x_breakpoints=breakpoints,
+#     y_values=values,
+#     plot_subname="example"
+# )
 
 def normalize_raw_pwl_function(
     x_breakpoints: list,
@@ -201,49 +288,134 @@ def generate_random_raw_pwl_function(
         y_values=y_values
     )
 
-chain_length = 10
-goc_functions_for_chain = []
-nyr_functions_for_chain = []
+def get_size_in_bytes(obj):
+    """
+    Get the memory size of a C++-backed object in bytes.
+    This assumes the C++ binding exposes a method 
+    called `memory_footprint_bytes()`.
+    """
+    if hasattr(obj, "memory_footprint_bytes"):
+        return obj.memory_footprint_bytes()
+    else:
+        # Fallback: Python object size (not accurate for C++ objects)
+        return sys.getsizeof(obj)
 
-for i in range(chain_length):
-    x_breakpoints, y_values = generate_random_raw_pwl_function(
-        num_breakpoints=random.randint(3, 10)
-    )
-    plot_subname = f"random-{i}-breakpoints-{len(x_breakpoints)}"
-    plot_raw_pwl_function(
-        x_breakpoints=x_breakpoints,
-        y_values=y_values,
-        plot_subname=plot_subname
+def benchmark_pwl_function_implementation(
+        composition_chain_lengths: list[int],
+        check_functions: bool = False,
+    ):
+    """
+    Benchmark the PWL function implementation by creating a chain
+    of PWL functions and measuring the time and memory usage.
+    """
+
+    # 1. Generate a chain of PWL functions
+    max_chain_length = max(composition_chain_lengths)
+    goc_functions_for_chain = []
+    nyr_functions_for_chain = []
+
+    for i in range(max_chain_length):
+        x_breakpoints, y_values = generate_random_raw_pwl_function(
+            num_breakpoints=6,
+        )
+        plot_subname = f"random-{i}-breakpoints-{len(x_breakpoints)}"
+        # plot_raw_pwl_function(
+        #     x_breakpoints=x_breakpoints,
+        #     y_values=y_values,
+        #     plot_subname=plot_subname
+        # )
+
+        goc_functions_for_chain.append(
+            pwlf_cpp.goc.PWLFunction(x_breakpoints, y_values)
+        )
+        nyr_functions_for_chain.append(
+            pwlf_cpp.nyr.CPWLF(x_breakpoints, y_values)
+        )
+
+    # Check all the functions
+    if check_functions:
+        print("Checking invariants and normalization for all functions in the chain:")
+        for i in range(max_chain_length):
+            goc_inv = goc_functions_for_chain[i].check_invariant()
+            print(f"goc_functions_for_chain[{i}].check_invariant(): {goc_inv}")
+            goc_norm = goc_functions_for_chain[i].check_normalization()
+            print(f"goc_functions_for_chain[{i}].check_normalization(): {goc_norm}")
+            nyr_inv = nyr_functions_for_chain[i].check_invariant()
+            print(f"nyr_functions_for_chain[{i}].check_invariant(): {nyr_inv}")
+            nyr_norm = nyr_functions_for_chain[i].check_normalization()
+            print(f"nyr_functions_for_chain[{i}].check_normalization(): {nyr_norm}")
+
+    # Plot all the goc functions
+    plot_raw_pwl_functions(
+        list_of_tuple_breakpoints_and_values=[
+            goc_function.copy_breakpoints_and_values() for goc_function in goc_functions_for_chain
+        ],
+        plot_subname="goc_chain"
     )
 
-    goc_functions_for_chain.append(
-        pwlf_cpp.goc.PWLFunction(x_breakpoints, y_values)
-    )
-    nyr_functions_for_chain.append(
-        pwlf_cpp.nyr.CPWLF(x_breakpoints, y_values)
-    )
+    # 2. Perform compositions
+    df = pd.DataFrame()
 
-# Plot all the goc functions
-plot_raw_pwl_functions(
-    list_of_tuple_breakpoints_and_values=[
-        goc_function.copy_breakpoints_and_values() for goc_function in goc_functions_for_chain
-    ],
-    plot_subname="goc_chain"
+    for chain_length in composition_chain_lengths:
+        # Chain composition for goc
+        goc_composed_function = goc_functions_for_chain[0]
+        start_goc = time.time()
+        for i in range(1, chain_length):
+            goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
+        goc_compose_time = time.time() - start_goc
+
+        # Chain composition for nyr
+        nyr_composed_function = nyr_functions_for_chain[0]
+        start_nyr = time.time()
+        for i in range(1, chain_length):
+            nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain[i])
+        nyr_compose_time = time.time() - start_nyr
+
+        # WARN: continuity errors due to rounding
+        # composed_raw_pwlfs.append(
+        #     goc_composed_function.copy_breakpoints_and_values()
+        # )
+
+        # plot_goc_pwl_function(
+        #     pwl_function=goc_composed_function,
+        #     plot_subname="goc_composed"
+        # )
+        # plot_nyr_cpwlf_function(
+        #     cpwlf_function=nyr_composed_function,
+        #     plot_subname="nyr_composed"
+        # )
+
+        #print(goc_composed_function.copy_breakpoints_and_values())
+
+        # Gather stats
+        stats = {
+            "Chain Length": chain_length,
+            "Function": ["goc_composed", "nyr_composed"],
+            "Num Pieces": [
+                goc_composed_function.piece_count(),
+                nyr_composed_function.nb_pieces()
+            ],
+            "Memory Used (Bytes)": [
+                get_size_in_bytes(goc_composed_function),
+                get_size_in_bytes(nyr_composed_function)
+            ],
+            "Compose Time (s)": [
+                goc_compose_time,
+                nyr_compose_time
+            ]
+        }
+
+        df_current_stats = pd.DataFrame(stats)
+        print(df_current_stats.to_markdown(index=False))
+        df = pd.concat(
+            [df, pd.DataFrame(stats)],
+            ignore_index=True
+        )
+
+    # 3. Print the full results    
+    print(df.to_markdown(index=False))
+
+
+benchmark_pwl_function_implementation(
+    composition_chain_lengths=[5, 10, 20, 50]
 )
-
-# Chain composition
-goc_composed_function = goc_functions_for_chain[0]
-nyr_composed_function = nyr_functions_for_chain[0]
-for i in range(1, chain_length):
-    goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
-    nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain[i])
-
-composed_raw_pwlfs = []
-composed_raw_pwlfs.append(
-    goc_composed_function.copy_breakpoints_and_values()
-)
-composed_raw_pwlfs.append(
-    nyr_composed_function.copy_breakpoints_and_values()
-)
-
-

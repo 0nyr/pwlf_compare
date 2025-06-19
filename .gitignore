@@ -3,3 +3,5 @@ src/build
 
 # Ignore python execution files
 **/__pycache__
+
+plots

@@ -14,6 +14,7 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <cstddef>   // for std::size_t
 
 #include "json.hpp"
 
@@ -244,6 +245,8 @@ std::ostream& operator<<(std::ostream& os, const std::bitset<N>& b)
 
 // ########## SEPARATOR ##########
 
+// ########## SEPARATOR ##########
+
 // Returns: If the string 'container' includes the string 'contained'.
 bool string_contains(const std::string& container, const std::string& contained);
 
@@ -378,6 +381,11 @@ public:
 	
 	// Returns: if two intervals are different.
 	bool operator!=(const Interval& i) const;
+
+	// Returns the total memory footprint of *this* object, in bytes,
+	// including both the fixed‐size portion (sizeof(*this)) and any
+	// heap allocations (e.g. std::vector buffers).
+	std::size_t memory_footprint_bytes() const;	
 };
 
 // JSON format: [left, right].
@@ -396,6 +404,11 @@ public:
 	Point2D(double x=0.0, double y=0.0);
 	
 	virtual void Print(std::ostream& os) const;
+
+	// Returns the total memory footprint of *this* object, in bytes,
+	// including both the fixed‐size portion (sizeof(*this)) and any
+	// heap allocations (e.g. std::vector buffers).
+	std::size_t memory_footprint_bytes() const;	
 };
 
 // JSON format: [x, y].
@@ -461,6 +474,11 @@ public:
 	
 	// Returns: if two functions have different p1 and p2.
 	bool operator!=(const LinearFunction& f) const;
+
+	// Returns the total memory footprint of *this* object, in bytes,
+	// including both the fixed‐size portion (sizeof(*this)) and any
+	// heap allocations (e.g. std::vector buffers).
+	std::size_t memory_footprint_bytes() const;	
 };
 
 // JSON format: [p1, p2].
@@ -604,6 +622,11 @@ public:
 	
 	// Returns: if any piece of both functions is different.
 	bool operator!=(const PWLFunction& f) const;
+
+	// Returns the total memory footprint of *this* object, in bytes,
+	// including both the fixed‐size portion (sizeof(*this)) and any
+	// heap allocations (e.g. std::vector buffers).
+	std::size_t memory_footprint_bytes() const;	
 private:
 	// Updates the image_ attribute to keep it updated after a Pop() operation.
 	void UpdateImage();
@@ -776,6 +799,11 @@ public:
 
     // Returns: if the function equals another function.
     bool operator==(const CPWLF& other) const;
+
+	// Returns the total memory footprint of *this* object, in bytes,
+	// including both the fixed‐size portion (sizeof(*this)) and any
+	// heap allocations (e.g. std::vector buffers).
+	std::size_t memory_footprint_bytes() const;	
 };
 
 

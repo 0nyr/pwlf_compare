@@ -30,6 +30,7 @@
             pythonPackages.numpy
             pythonPackages.tqdm
             pythonPackages.pandas
+            pythonPackages.tabulate
             pythonPackages.seaborn
             pythonPackages.matplotlib
             

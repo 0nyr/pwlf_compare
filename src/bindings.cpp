@@ -83,7 +83,8 @@ PYBIND11_MODULE(pwlf_cpp, m) {
             std::ostringstream oss;
             i.Print(oss);
             return oss.str();
-        });
+        })
+        .def("memory_footprint_bytes", &goc::Interval::memory_footprint_bytes, "Get total memory footprint in bytes");
 
     // ==================== POINT2D CLASS ====================
     py::class_<goc::Point2D>(goc, "Point2D")
@@ -95,7 +96,8 @@ PYBIND11_MODULE(pwlf_cpp, m) {
             std::ostringstream oss;
             p.Print(oss);
             return oss.str();
-        });
+        })
+        .def("memory_footprint_bytes", &goc::Point2D::memory_footprint_bytes, "Get total memory footprint in bytes");
 
     // ==================== LINEAR FUNCTION CLASS ====================
     py::class_<goc::LinearFunction>(goc, "LinearFunction")
@@ -128,7 +130,8 @@ PYBIND11_MODULE(pwlf_cpp, m) {
             std::ostringstream oss;
             f.Print(oss);
             return oss.str();
-        });
+        })
+        .def("memory_footprint_bytes", &goc::LinearFunction::memory_footprint_bytes, "Get total memory footprint in bytes");
 
     // Linear function standalone functions
     goc.def("dom", py::overload_cast<const goc::LinearFunction&>(&goc::dom), "Get function domain");
@@ -192,7 +195,8 @@ PYBIND11_MODULE(pwlf_cpp, m) {
             std::ostringstream oss;
             f.Print(oss);
             return oss.str();
-        });
+        })
+        .def("memory_footprint_bytes", &goc::PWLFunction::memory_footprint_bytes, "Get total memory footprint in bytes");
 
     // PWL function standalone functions
     goc.def("dom", py::overload_cast<const goc::PWLFunction&>(&goc::dom), "Get function domain");
@@ -256,7 +260,8 @@ PYBIND11_MODULE(pwlf_cpp, m) {
             std::ostringstream oss;
             f.Print(oss);
             return oss.str();
-        });
+        })
+        .def("memory_footprint_bytes", &nyr::CPWLF::memory_footprint_bytes, "Get total memory footprint in bytes");
 
     // ==================== ADDITIONAL UTILITY FUNCTIONS ====================
     
