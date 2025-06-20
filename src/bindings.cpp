@@ -263,6 +263,48 @@ PYBIND11_MODULE(pwlf_cpp, m) {
         })
         .def("memory_footprint_bytes", &nyr::CPWLF::memory_footprint_bytes, "Get total memory footprint in bytes");
 
+    // ==================== NDCPWLF CLASS ====================
+    py::class_<nyr::NDCPWLF>(nyr, "NDCPWLF")
+        .def(py::init<>(), "Create empty NDCPWLF")
+        .def(py::init<const std::vector<double>, const std::vector<double>>(),
+             "Create NDCPWLF from breakpoints and values",
+             py::arg("breakpoints"), py::arg("values"))
+        .def_static("make_identity", &nyr::NDCPWLF::make_identity,
+                   "Create identity function", py::arg("domain"))
+        .def("empty", &nyr::NDCPWLF::empty, "Check if function is empty")
+        .def("nb_pieces", &nyr::NDCPWLF::nb_pieces, "Get number of pieces")
+        .def("evaluate", &nyr::NDCPWLF::evaluate, "Evaluate function at x",
+             py::arg("x"))
+        .def("__call__", &nyr::NDCPWLF::operator(), "Evaluate function at x",
+             py::arg("x"))
+        .def("check_invariant", &nyr::NDCPWLF::check_invariant, "Check function invariant")
+        .def("check_normalization", &nyr::NDCPWLF::check_normalization, "Check if function is normalized")
+        .def("compose", &nyr::NDCPWLF::compose, "Compose with other NDCPWLF",
+             py::arg("g"))
+        .def("to_goc_pwl_function", &nyr::NDCPWLF::to_goc_pwl_function, "Convert to GOC PWL function")
+        .def("get_min_domain", &nyr::NDCPWLF::get_min_domain, "Get minimum domain value")
+        .def("get_max_domain", &nyr::NDCPWLF::get_max_domain, "Get maximum domain value")
+        .def("get_min_image", &nyr::NDCPWLF::get_min_image, "Get minimum image value")
+        .def("get_max_image", &nyr::NDCPWLF::get_max_image, "Get maximum image value")
+        .def("get_domain", &nyr::NDCPWLF::get_domain, "Get function domain")
+        .def("get_image", &nyr::NDCPWLF::get_image, "Get function image")
+        .def("get_breakpoints", &nyr::NDCPWLF::get_breakpoints, "Get breakpoints",
+             py::return_value_policy::reference_internal)
+        .def("get_values", &nyr::NDCPWLF::get_values, "Get values",
+             py::return_value_policy::reference_internal)
+        .def("copy_breakpoints_and_values", &nyr::NDCPWLF::copy_breakpoints_and_values,
+             "Get copy of breakpoints and values as pair")
+        .def("memory_footprint_bytes", &nyr::NDCPWLF::memory_footprint_bytes,
+             "Get memory footprint in bytes")
+        .def_readonly("xs", &nyr::NDCPWLF::xs, "Sorted x-values (breakpoints)")
+        .def_readonly("ys", &nyr::NDCPWLF::ys, "Corresponding y-values")
+        .def("__eq__", &nyr::NDCPWLF::operator==)
+        .def("__repr__", [](const nyr::NDCPWLF& f) {
+            std::ostringstream oss;
+            f.Print(oss);
+            return oss.str();
+        });
+
     // ==================== ADDITIONAL UTILITY FUNCTIONS ====================
     
     // Print padded vectors function

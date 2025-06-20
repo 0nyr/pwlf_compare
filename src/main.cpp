@@ -1288,8 +1288,8 @@ CPWLF CPWLF::compose(const CPWLF& g) const {
 }
 
 void CPWLF::Print(std::ostream& os) const {
-    clog << "CPWLF Image: " << image_ << ", Domain: " << domain_ << "]" << endl;
-    goc::print_padded_vectors(clog, breakpoints_, values_);
+	os << "CPWLF Domain: " << domain_ << ", Image: " << image_ << std::endl;
+	goc::print_padded_vectors(os, breakpoints_, values_);
 }
 
 bool CPWLF::operator==(const CPWLF& other) const {
@@ -1328,14 +1328,26 @@ std::size_t nyr::CPWLF::memory_footprint_bytes() const {
 
 // ########## SEPARATOR ##########
 
-static NDCPWLF make_identity(goc::Interval domain) {
+nyr::NDCPWLF nyr::NDCPWLF::make_identity(goc::Interval domain) {
 	if (domain.Empty()) {
 		return NDCPWLF(); // Return empty function
 	}
 	
 	std::vector<double> xs = {domain.left, domain.right};
 	std::vector<double> ys = {domain.left, domain.right};
-	return NDCPWLF{std::move(xs), std::move(ys)};
+	return NDCPWLF(xs, ys);
+}
+
+nyr::NDCPWLF::NDCPWLF(
+	const std::vector<double> xs,
+	const std::vector<double> ys
+) : xs(std::move(xs)), ys(std::move(ys)) {
+	#ifndef NDEBUG
+	// Check both check_invariant and check_normalization
+	if (!check_normalization()) {
+		throw std::runtime_error("Normalization check failed after construction.");
+	}
+	#endif
 }
 
 // Check if function is empty
@@ -1469,7 +1481,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	if (f.empty() || g.empty() ||
 		// check if the image of g intersects the domain of f
 		// Not ( g.max_img] [f.min_dom or f.max_dom] [g.min_img )
-		!(goc::epsilon_smaller(g.ys.back(), f.xs.front()) || goc::epsilon_bigger(g.ys_.front(), f.xs_.back()))
+		!(goc::epsilon_smaller(g.ys.back(), f.xs.front()) || goc::epsilon_bigger(g.ys.front(), f.xs.back()))
 	) {
 		return nyr::NDCPWLF(); // Return empty function
 	}
@@ -1575,10 +1587,48 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	std::sort(fog_xs.begin(), fog_xs.end());
 	std::sort(fog_ys.begin(), fog_ys.end());
 
-	return nyr::NDCPWLF{std::move(fog_xs), std::move(fog_ys)};
+	return nyr::NDCPWLF(fog_xs, fog_ys);
 }
 
+goc::PWLFunction nyr::NDCPWLF::to_goc_pwl_function() const {
+	goc::PWLFunction pwlf;
+	if (empty()) {
+		return pwlf; // Return empty PWLFunction
+	}
 
+	// Convert xs and ys to goc::PWLFunction
+	for (size_t i = 0; i < xs.size() - 1; ++i) {
+		pwlf.AddPiece(goc::LinearFunction(
+			goc::Point2D(xs[i], ys[i]),
+			goc::Point2D(xs[i + 1], ys[i + 1])
+		));
+	}
+
+	return pwlf;
+}
+
+void nyr::NDCPWLF::Print(std::ostream& os) const {
+	os << "NDCPWLF Domain: " << get_domain() 
+	   << ", Image: " << get_image() << std::endl;
+	goc::print_padded_vectors(os, xs, ys);
+}
+
+bool nyr::NDCPWLF::operator==(const NDCPWLF& other) const {
+	// Check if xs and ys are the same
+	return (
+		(xs == other.xs) && 
+		(ys == other.ys)
+	);
+}
+
+std::size_t nyr::NDCPWLF::memory_footprint_bytes() const {
+	// sizeof(*this) covers: 
+	//   - domain_, image_, the two vector headers (3 pointers each on most platforms), etc.
+	// the following adds the heap‐allocated storage for both vectors:
+	return sizeof(*this)
+		 + xs.capacity() * sizeof(double)
+		 + ys.capacity() * sizeof(double);
+}
 
 // #################### NAMESPACE END ####################
 

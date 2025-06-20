@@ -503,7 +503,7 @@ def benchmark_pwl_function_implementation(
                 pwlf_cpp.goc.PWLFunction(x_breakpoints, y_values)
             )
             nyr_functions_for_chain.append(
-                pwlf_cpp.nyr.CPWLF(x_breakpoints, y_values)
+                pwlf_cpp.nyr.NDCPWLF(x_breakpoints, y_values)
             )
 
         # Check all the functions

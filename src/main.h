@@ -833,10 +833,10 @@ public:
     // Constructor for 2D continuous piecewise linear function
     // Precondition: The list of breakpoints must be sorted and unique.
 	// Precondition: The values must be non-decreasing, but not necessarily unique (step function case).
-    NDCPWLF(
-        const std::vector<double>& breakpoints,
-        const std::vector<double>& values
-    );
+	NDCPWLF(
+		const std::vector<double> xs,
+		const std::vector<double> ys
+	);
 
     // Return empty
     NDCPWLF() = default;
@@ -877,22 +877,27 @@ public:
 
     // Getters
     inline double get_min_domain() const {
-		return xs_.empty() ? goc::INFTY : xs_.front();
+		return xs.empty() ? goc::INFTY : xs.front();
 	}
     inline double get_max_domain() const {
-		return xs_.empty() ? -goc::INFTY : xs_.back();
+		return xs.empty() ? -goc::INFTY : xs.back();
 	}
 	inline double get_min_image() const {
-		return ys_.empty() ? goc::INFTY : ys_.front();
+		return ys.empty() ? goc::INFTY : ys.front();
 	}
 	inline double get_max_image() const {
-		return ys_.empty() ? -goc::INFTY : ys_.back();
+		return ys.empty() ? -goc::INFTY : ys.back();
 	}
-
-    const std::vector<double>& get_breakpoints() const { return xs_; }
-    const std::vector<double>& get_values() const { return ys_; }	
+	inline goc::Interval get_domain() const {
+		return goc::Interval(get_min_domain(), get_max_domain());
+	}
+	inline goc::Interval get_image() const {
+		return goc::Interval(get_min_image(), get_max_image());
+	}
+    const std::vector<double>& get_breakpoints() const { return xs; }
+    const std::vector<double>& get_values() const { return ys; }	
 	const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const {
-		return {xs_, ys_};
+		return {xs, ys};
 	}
 
     // Returns: if the function equals another function.
