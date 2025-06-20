@@ -1517,6 +1517,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// Edge case 2: If f(y) corresponds to a flat (horizontal segment) on f, might need to remove the last added point if the one before also has same y value
 	for (size_t i = 0; i < g.ys.size(); ++i)
 	{
+		double x_prime = g.xs[i];
 		double y = g.ys[i];
 		if (!interval_vector_includes(f.xs, y)) continue; // If y is not in f's domain, skip
 
@@ -1529,22 +1530,20 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		#endif
 		size_t j = (it - f.xs.begin());
 
-		double x_prime = g.xs[i];
 		double f_x0 = f.xs[j];
 		double f_x1 = f.xs[j + 1];
 		double f_y0 = f.ys[j];
 		double f_y1 = f.ys[j + 1];
-		double slope_f_piece = (f_y1 - f_y0) / (f_x1 - f_x0);
-		if (goc::epsilon_equal(f_x0, f_x1) || 
-			goc::epsilon_bigger_equal(slope_f_piece, goc::INFTY) ||
-			goc::epsilon_smaller_equal(slope_f_piece, -goc::INFTY)
+		double slope_f_piece = std::abs((f_y1 - f_y0) / (f_x1 - f_x0));
+		if (// Is the matching f piece vertical?
+			goc::epsilon_equal(f_x0, f_x1) || 
+			goc::epsilon_bigger_equal(slope_f_piece, goc::INFTY)
 		) {
 			// If the piece is vertical, add both endpoints
 			// if it is the first time we encounter this piece,
 			// else only the second endpoint.
 			if (fog_xs.size() > 0 && 
-				goc::epsilon_equal(fog_ys[fog_ys.size() - 1], f_y1) &&
-				goc::epsilon_equal(fog_xs[fog_xs.size() - 1], x_prime)
+				goc::epsilon_equal(fog_ys[fog_ys.size() - 1], f_y1)
 			) {
 				fog_xs.push_back(x_prime);
 				fog_ys.push_back(f_y1);
@@ -1555,22 +1554,25 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 				fog_ys.push_back(f_y1);
 			}
 		} else if (
+			// Is the matching f piece horizontal?
 			goc::epsilon_equal(f_y0, f_y1)
 			|| goc::epsilon_equal(slope_f_piece, 0.0) 
 		) {
 			// If the piece is horizontal, remove the last added point if it is an intermediate (duplicate) point
+			double y_prime = f_y0; 
 			if (fog_ys.size() > 1 &&
 				goc::epsilon_equal(fog_ys[fog_ys.size() - 1], fog_ys[fog_ys.size() - 2]) && 
-				goc::epsilon_equal(fog_ys[fog_xs.size() - 1], f_y0)
+				goc::epsilon_equal(fog_ys[fog_ys.size() - 1], y_prime)
 			) {
 				// Remove the last added point
 				fog_xs.pop_back();
 				fog_ys.pop_back();
 			}
 			fog_xs.push_back(x_prime);
-			fog_ys.push_back(f_y0);
+			fog_ys.push_back(y_prime);
 		} else {
-			// If the piece is not vertical, compute the y value corresponding to x
+			// If the piece is not vertical or horizontal
+			// compute the y value corresponding to x
 			// fog(x) = f(y) = f_y0 + (f_y1 - f_y0) * (y - f_x0) / (f_x1 - f_x0)
 			double intercept_f_piece = f_y0 - slope_f_piece * f_x0;
 
@@ -1578,7 +1580,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 			if (goc::epsilon_equal(slope_f_piece, 0.0))
 				throw std::runtime_error("NDCPWLF::compose: Slope of piece is zero, which should have already been handled by the previous cases.");
 			#endif
-			
+
 			double y_prime = slope_f_piece * y + intercept_f_piece;
 			fog_xs.push_back(x_prime);
 			fog_ys.push_back(y_prime);
@@ -1591,6 +1593,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then this point has already been added in the previous step (continue)
 	for (size_t i = 0; i < f.xs.size(); ++i)
 	{
+		double y_prime = f.ys[i];
 		double x = f.xs[i];
 		if (!interval_vector_includes(g.ys, x)) continue; // If x is not in g's image, skip
 
@@ -1605,11 +1608,11 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 
 		// If x \in g.xs_, then this point has already been added in the previous step, skip
 		// NOTE: Also prevent the case where the g piece is horizontal, i.e. g.xs_[j] == g.xs_[j + 1]
-		double g_y0 = g.ys[j];
 		double g_x0 = g.xs[j];
+		double g_y0 = g.ys[j];
 		double g_x1 = g.xs[j + 1];
 		double g_y1 = g.ys[j + 1];
-		double slope_g_piece = (g_y1 - g_y0) / (g_x1 - g_x0);
+		double slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
 		if (
 			goc::epsilon_equal(g_y0, x)
 			|| goc::epsilon_equal(slope_g_piece, 0.0)
@@ -1621,7 +1624,6 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		if (
 			goc::epsilon_equal(g_x0, g_x1)
 			|| goc::epsilon_bigger_equal(slope_g_piece, goc::INFTY)
-			|| goc::epsilon_smaller_equal(slope_g_piece, -goc::INFTY)
 		) {
 			continue; 
 		}
@@ -1631,7 +1633,6 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 				throw std::runtime_error("NDCPWLF::compose: Slope of piece is zero, which should have already been handled by the previous cases.");
 		#endif
 
-		double y_prime = f.ys[i];
 		// If the piece is not vertical, compute the x_prime value corresponding to y
 		// compute x_prime such that fog(x_prime) = y_prime
 		double intercept_g_piece = g_y0 - slope_g_piece * g_x0;
@@ -1641,7 +1642,9 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		fog_ys.push_back(y_prime);
 	}
 
-	// 4. Shrink vectors to fit the actual number of points and sort them in place, ascending order.
+	// 4. Shrink vectors to fit the actual number of points 
+	// At this step, we should have added points to fog is the wrong order
+	// but since fog is non-decreasing, we can sort both vectors
 	fog_xs.shrink_to_fit();
 	fog_ys.shrink_to_fit();
 	std::sort(fog_xs.begin(), fog_xs.end());
@@ -1709,6 +1712,28 @@ void test_interval_vector_intersects() {
 
 	#ifndef NDEBUG
 	std::clog << "All interval_vector_intersects tests passed!" << std::endl;
+	#endif
+}
+
+void test_interval_vector_includes() {
+	// Test cases for interval_vector_includes
+	std::vector<double> vec1 = {1.0, 2.0, 3.0};
+	std::vector<double> vec2 = {2.5, 3.5, 4.5};
+	std::vector<double> vec3 = {0.5, 1.5, 2.5};
+
+	// Should return true: 2.0 is in [1.0, 3.0]
+	assert(interval_vector_includes(vec1, 2.5) == true);
+	// Should return false: 4.0 is not in [1.0, 3.0]
+	assert(interval_vector_includes(vec1, 4.0) == false);
+	// Should return true: 1.5 is in [0.5, 2.5]
+	assert(interval_vector_includes(vec3, 1.5) == true);
+	// Should return false: empty vector should not include any value
+	assert(interval_vector_includes({}, 1.0) == false);
+	// Point case: should return true since 3.0 is in [1.0, 3.0]
+	assert(interval_vector_includes(vec1, 3.0) == true);
+
+	#ifndef NDEBUG
+	std::clog << "All interval_vector_includes tests passed!" << std::endl;
 	#endif
 }
 

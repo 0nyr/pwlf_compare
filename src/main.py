@@ -24,6 +24,7 @@ sys.path.append(PWLF_DIR)  # or wherever the .so is
 import pwlf_cpp
 
 pwlf_cpp.nyr.test_interval_vector_intersects()
+pwlf_cpp.nyr.test_interval_vector_includes()
 
 # # Create intervals
 # interval = pwlf_cpp.goc.Interval(0.0, 10.0)
@@ -520,7 +521,8 @@ def benchmark_pwl_function_implementation(
                 nyr_norm = nyr_functions_for_chain[i].check_normalization()
                 print(f"nyr_functions_for_chain[{i}].check_normalization(): {nyr_norm}")
 
-                # Print nyr function
+                # Print functions
+                print(f"goc_functions_for_chain[{i}]: {goc_functions_for_chain[i]}")
                 print(f"nyr_functions_for_chain[{i}]: {nyr_functions_for_chain[i]}")
             
 
@@ -540,6 +542,7 @@ def benchmark_pwl_function_implementation(
             for i in range(1, chain_length):
                 goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
             goc_compose_time = time.time() - start_goc
+            print("GOC composed function:", goc_composed_function)
 
             # Chain composition for nyr
             nyr_composed_function = nyr_functions_for_chain[0]
@@ -640,7 +643,7 @@ def benchmark_pwl_function_implementation(
 
 
 benchmark_pwl_function_implementation(
-    composition_chain_lengths=[5, 10, 20, 50],
+    composition_chain_lengths=[2],
     pwlf_nb_breakpoints=[6],
     check_functions=True,
     non_decreasing=True

@@ -310,6 +310,9 @@ PYBIND11_MODULE(pwlf_cpp, m) {
      // Test interval intersects
      nyr.def("test_interval_vector_intersects", &nyr::test_interval_vector_intersects, "Run tests for interval_vector_intersects");
 
+     // Test interval includes
+     nyr.def("test_interval_vector_includes", &nyr::test_interval_vector_includes, "Run tests for interval_vector_includes");
+
     // Print padded vectors function
     m.def("print_padded_vectors", [](const std::vector<double>& vec1, const std::vector<double>& vec2) {
         std::ostringstream oss;
