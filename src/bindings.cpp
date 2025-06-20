@@ -307,6 +307,9 @@ PYBIND11_MODULE(pwlf_cpp, m) {
 
     // ==================== ADDITIONAL UTILITY FUNCTIONS ====================
     
+     // Test interval intersects
+     nyr.def("test_interval_vector_intersects", &nyr::test_interval_vector_intersects, "Run tests for interval_vector_intersects");
+
     // Print padded vectors function
     m.def("print_padded_vectors", [](const std::vector<double>& vec1, const std::vector<double>& vec2) {
         std::ostringstream oss;

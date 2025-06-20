@@ -952,6 +952,8 @@ inline bool interval_vector_intersects(
 			 goc::epsilon_bigger(v.front(), w.back()));
 }
 
+void test_interval_vector_intersects();
+
 
 } // namespace nyr
 // #################### NAMESPACE END ####################
