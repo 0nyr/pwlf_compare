@@ -1328,11 +1328,138 @@ std::size_t nyr::CPWLF::memory_footprint_bytes() const {
 
 // ########## SEPARATOR ##########
 
-// Check if function is empty
-bool nyr::NDCPWLF::empty() const {
-    return xs_.empty();
+static NDCPWLF make_identity(goc::Interval domain) {
+	if (domain.Empty()) {
+		return NDCPWLF(); // Return empty function
+	}
+	
+	std::vector<double> xs = {domain.left, domain.right};
+	std::vector<double> ys = {domain.left, domain.right};
+	return NDCPWLF{std::move(xs), std::move(ys)};
 }
 
+// Check if function is empty
+bool nyr::NDCPWLF::empty() const {
+    return xs.empty();
+}
+
+// Number of pieces = xs - 1
+size_t nyr::NDCPWLF::nb_pieces() const {
+	return empty() ? 0 : xs.size() - 1;
+}
+
+double nyr::NDCPWLF::evaluate(double x) const {
+	// If the function is empty, throw an exception
+	if (empty()) {
+		throw std::out_of_range("Cannot evaluate empty NDCPWLF");
+	}
+
+	// Check if x is in the domain using epsilon comparisons
+	if (!interval_vector_includes(xs, x)) {
+		throw std::out_of_range("x is outside NDCPWLF domain");
+	}
+
+	// Binary search to find the right segment
+    // Find first breakpoint that is epsilon_bigger than x
+    // NOTE: Do not use epsilon comparison here (better optimization)
+    // and perform check after finding the segment.
+    auto it = std::upper_bound(xs.begin(), xs.end(), x);
+    
+    // Handle edge case where upper_bound returns end()
+    // NOTE: critical safety check to prevent undefined behavior 
+    // when dereferencing the iterator.
+    if (it == xs.end()) {
+        return ys.back();
+    }
+    
+    // Handle case where x is very close to a breakpoint
+    if (goc::epsilon_equal(x, *it)) {
+        size_t idx = std::distance(xs.begin(), it);
+        return ys[idx];
+    }
+    
+    // Get indices for the segment [x_i, x_{i+1}]
+    size_t right_idx = std::distance(xs.begin(), it);
+    size_t left_idx = right_idx - 1;
+    
+    // Linear interpolation between (x_i, y_i) and (x_{i+1}, y_{i+1})
+    double x_left = xs[left_idx];
+    double x_right = xs[right_idx];
+    double y_left = ys[left_idx];
+    double y_right = ys[right_idx];
+    
+    #ifndef NDEBUG
+        // Handle degenerate case using epsilon comparison
+        if (goc::epsilon_equal(x_right, x_left)) {
+            return y_left;
+        }
+    #endif
+    
+    // Linear interpolation: y = y_left + (y_right - y_left) * (x - x_left) / (x_right - x_left)
+    double t = (x - x_left) / (x_right - x_left);
+    return y_left + t * (y_right - y_left);
+}
+
+double nyr::NDCPWLF::operator()(double x) const {
+	return evaluate(x);
+}
+
+bool nyr::NDCPWLF::check_invariant() const {
+	if (xs.size() != ys.size()) return false;
+	if (xs.empty()) return true; // An empty function is valid
+
+	// Check xs and ys are non-decreasing
+	for (size_t i = 1; i < xs.size(); ++i) {
+		if (goc::epsilon_smaller(xs[i], xs[i-1]) || goc::epsilon_smaller(ys[i], ys[i-1])) {
+			return false; // xs or ys are not non-decreasing
+		}
+	}
+
+	return true;
+}
+
+// Checks if the function is normalized.
+// In this context, a normalized NDCPWLF has no intermediate points.
+// Handles steps or flat segments which are allowed.
+bool nyr::NDCPWLF::check_normalization() const {
+	if (xs.size() < 2) {
+		return true; // A single point or empty function is normalized
+	}
+
+	// Check that xs and ys are non-decreasing.
+	if (check_invariant() == false) {
+		return false;
+	}
+
+	// Check that no piece is the continuation of the previous piece.
+	for (size_t i = 1; i < xs.size() - 1; ++i) {
+		double x_prev = xs[i-1];
+		double y_prev = ys[i-1];
+		double x_curr = xs[i];
+		double y_curr = ys[i];
+		double x_next = xs[i+1];
+		double y_next = ys[i+1];
+
+		// Denominators can definitly be zero
+		double slope1 = 0.0;
+		double slope2 = 0.0;
+		if (goc::epsilon_different(y_curr, y_prev)) {
+			slope1 = (y_curr - y_prev) / (x_curr - x_prev);
+		}
+		if (goc::epsilon_different(y_next, y_curr)) {
+			slope2 = (y_next - y_curr) / (x_next - x_curr);
+		}
+
+		// If the slopes are not different, the current breakpoint is not necessary.
+		if (goc::epsilon_equal(slope1, slope2)) {
+			return false; // Found a redundant point
+		}
+	}
+	return true; // All checks passed, the function is normalized
+}
+
+// NOTE: See my notes, Lab Notebook X104272, p98-99.
+// Time complexity: O(log_2(#pieces_of_g)*#pieces_of_f + log_2(#pieces_of_f)*#pieces_of_g) = O(2*p*log_2(p))
 nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	const auto& f = *this;
 
@@ -1342,49 +1469,113 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	if (f.empty() || g.empty() ||
 		// check if the image of g intersects the domain of f
 		// Not ( g.max_img] [f.min_dom or f.max_dom] [g.min_img )
-		!(goc::epsilon_smaller(g.ys_.back(), f.xs_.front()) || goc::epsilon_bigger(g.ys_.front(), f.xs_.back()))
+		!(goc::epsilon_smaller(g.ys.back(), f.xs.front()) || goc::epsilon_bigger(g.ys_.front(), f.xs_.back()))
 	) {
 		return nyr::NDCPWLF(); // Return empty function
 	}
 
+	// 2. Prepare fog
 	std::vector<double> fog_xs;
 	std::vector<double> fog_ys;
 	// By theorem, fog has at most f.xs_.size() * g.ys_.size() points.
 	// So reserve space for the worst case, and shrink later.
-	fog_xs.reserve(f.xs_.size() * g.ys_.size());
-	fog_ys.reserve(f.xs_.size() * g.ys_.size());
-	unsigned int nb_points = 0;
+	fog_xs.reserve(f.xs.size() * g.ys.size());
+	fog_ys.reserve(f.xs.size() * g.ys.size());
 
-	// Steps 1 and 2: Find all points P'(x', y') in fog.
+	// Steps 3 and 4: Find all points P'(x', y') in fog.
 	// NOTE: Since fog is a NDCPWLF, we can add x' and y' in any order
 	// then sort fog_xs and fog_ys at the end.
 
-	// 2. Iterate over g points (forward: x' given, need to compute y')
+	// 4. Iterate over g points (forward: x' given, need to compute y')
 	// Each point P(x, y) in g such that y \in f.domain adds (at least) a point to fog
 	// Edge case 1: If f(y) corresponds to a step (vertical segment) on f, add 2 points to fog corresponding to the segment endpoints.
-	for (size_t i = 0; i < g.ys_.size(); ++i)
+	for (size_t i = 0; i < g.ys.size(); ++i)
 	{
-		double y = g.ys_[i];
-		if (!interval_vector_includes(f.xs_, y)) continue; // If y is not in f's domain, skip
+		double y = g.ys[i];
+		if (!interval_vector_includes(f.xs, y)) continue; // If y is not in f's domain, skip
 
-		// Find the piece of f that contains y
+		// Find the piece of f that contains y, using binary search.
 		// Here, it consists in finding the first index j such that f.xs_[j] <= y <= f.xs_[j+1
+		auto it = std::lower_bound(f.xs.begin(), f.xs.end(), y);
+		#ifndef NDEBUG
+		if (it == f.xs.begin() || it == f.xs.end()) // Should never happen due to domain check
+			throw std::out_of_range("NDCPWLF::evaluate: y is out of range for f.xs_. This should not happen due to pre-check.");
+		#endif
+		size_t j = (it - f.xs.begin());
 
-
-		// If the piece is horizontal, add both endpoints
-
-		// Otherwise, compute the x value corresponding to y
-		
+		// If the piece is vertical, add both endpoints
+		double x_prime = g.xs[i];
+		double f_x0 = f.xs[j];
+		double f_x1 = f.xs[j + 1];
+		double f_y0 = f.ys[j];
+		double f_y1 = f.ys[j + 1];
+		if (goc::epsilon_equal(f_x0, f_x1)) {
+			// If the piece is vertical, add both endpoints
+			
+			fog_xs.push_back(x_prime);
+			fog_ys.push_back(f_y0);
+			fog_xs.push_back(x_prime);
+			fog_ys.push_back(f_y1);
+		} else {
+			// If the piece is not vertical, compute the y value corresponding to x
+			// fog(x) = f(y) = f_y0 + (f_y1 - f_y0) * (y - f_x0) / (f_x1 - f_x0)
+			double y_prime = f_y0 + (f_y1 - f_y0) * (x_prime - f_x0) / (f_x1 - f_x0);
+			fog_xs.push_back(x_prime);
+			fog_ys.push_back(y_prime);
+		}
 	}
 
 	// 3. Iterate over f points: (backward: y' given, need to compute x')
 	// Each point P(x, y) in f such that x \in g.image adds (a maximum of) a point to fog
 	// Edge case 1: If x corresponds to a step (vertical segment) on g, then this point has already been added in the previous step (continue)
 	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then this point has already been added in the previous step (continue)
+	for (size_t i = 0; i < f.xs.size(); ++i)
+	{
+		double x = f.xs[i];
+		if (!interval_vector_includes(g.ys, x)) continue; // If x is not in g's image, skip
 
-	// 4. Sort fog_xs and fog_ys
+		// Find the piece of g that contains x, using binary search.
+		// Here, it consists in finding the first index j such that g.ys_[j] <= x <= g.ys_[j+1]
+		auto it = std::lower_bound(g.ys.begin(), g.ys.end(), x);
+		#ifndef NDEBUG
+		if (it == g.ys.begin() || it == g.ys.end()) // Should never happen due to image check
+			throw std::out_of_range("NDCPWLF::evaluate: x is out of range for g.ys_. This should not happen due to pre-check.");
+		#endif
+		size_t j = (it - g.ys.begin());
 
-	return nyr::NDCPWLF(fog_xs, fog_ys);
+		// If x \in g.xs_, then this point has already been added in the previous step, skip
+		// NOTE: Also prevent the case where the g piece is horizontal, i.e. g.xs_[j] == g.xs_[j + 1]
+		double g_y0 = g.ys[j];
+		if (goc::epsilon_equal(g_y0, x)) {
+			continue;
+		}
+
+		// If the g piece is vertical, it has already been added in the previous step, skip
+		double g_x0 = g.xs[j];
+		double g_x1 = g.xs[j + 1];
+		double g_y1 = g.ys[j + 1];
+		if (goc::epsilon_equal(g_x0, g_x1)) {
+			continue; 
+		}
+
+		double y_prime = f.ys[i];
+		// If the piece is not vertical, compute the x_prime value corresponding to y
+		// compute x_prime such that fog(x_prime) = y_prime
+		double slope_g_piece = (g_y1 - g_y0) / (g_x1 - g_x0);
+		double intercept_g_piece = g_y0 - slope_g_piece * g_x0;
+		double x_prime = (x - intercept_g_piece) / slope_g_piece;
+		// Add the point to fog
+		fog_xs.push_back(x_prime);
+		fog_ys.push_back(y_prime);
+	}
+
+	// 4. Shrink vectors to fit the actual number of points and sort them in place, ascending order.
+	fog_xs.shrink_to_fit();
+	fog_ys.shrink_to_fit();
+	std::sort(fog_xs.begin(), fog_xs.end());
+	std::sort(fog_ys.begin(), fog_ys.end());
+
+	return nyr::NDCPWLF{std::move(fog_xs), std::move(fog_ys)};
 }
 
 

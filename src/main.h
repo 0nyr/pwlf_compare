@@ -822,13 +822,11 @@ public:
  * Contains `p` pieces for `b = p + 1` breakpoints.
  */
 class NDCPWLF : public goc::Printable {
-
-private:
-    std::vector<double> xs_; // Sorted x-values
-    std::vector<double> ys_; // Corresponding (sorted) y-values
+public:
+	const std::vector<double> xs; // Sorted x-values
+    const std::vector<double> ys; // Corresponding (sorted) y-values
     // NOTE: No need to store domain_ and image_ since they are obtained in O(1) from xs_ and ys_.
 
-public:
     // Returns: f(x)=x with the specific domain.
 	static NDCPWLF make_identity(goc::Interval domain);
 
@@ -852,6 +850,7 @@ public:
     // O(log n) evaluation using binary search and linear interpolation
     // Throws std::out_of_range if x is outside the domain.
     // Precondition: x \in dom(f)
+	// Note that if x is the domain value of a step, it returns the smallest value of the step.
     double evaluate(double x) const;
 	
 	// Returns: the evaluation of the piece that includes x in its domain.
@@ -859,8 +858,9 @@ public:
 	// Note that if x is the domain value of a step, it returns the smallest value of the step.
 	double operator()(double x) const;
 
-    // Checks if the function is well-formed. 
-	// Check that the function is non-decreasing.
+    // Checks if the function is well-formed, i.e. that
+	// its xs and ys are non-decreasing.
+	// NOTE: There can be duplicate xs and ys.
     bool check_invariant() const;
 
 	// Checks if the function is normalized.
