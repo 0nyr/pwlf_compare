@@ -467,7 +467,8 @@ def benchmark_pwl_function_implementation(
         pwlf_nb_breakpoints: list[int],
         check_functions: bool = False,
         non_decreasing: bool = False,
-        num_breakpoints: int = 6
+        num_breakpoints: int = 6,
+        use_tree_chain_composition: bool = False
     ):
     """
     Benchmark the PWL function implementation by creating a chain
@@ -540,13 +541,38 @@ def benchmark_pwl_function_implementation(
         #     plot_subname="goc_chain"
         # )
 
+        def perform_tree_chain_composition(
+            functions: list[pwlf_cpp.goc.PWLFunction | pwlf_cpp.nyr.NDCPWLF]
+        ):
+            """
+            Perform tree chain composition of the given functions.
+            """
+            composed_functions = functions # reference
+            if len(functions) == 1:
+                return functions[0]
+            while len(composed_functions) > 1:
+                next_composed_functions = []
+                for i in range(0, len(composed_functions) // 2):
+                    # Compose pairs of functions
+                    f1 = composed_functions[2 * i]
+                    f2 = composed_functions[2 * i + 1]
+                    next_composed_functions.append(f1.compose(f2))
+                composed_functions = next_composed_functions
+
+            return composed_functions[0]
+
         # 2. Perform compositions
         for chain_length in composition_chain_lengths:
             # Chain composition for goc
             goc_composed_function = goc_functions_for_chain[0]
             start_goc = time.time()
-            for i in range(1, chain_length):
-                goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
+            if not use_tree_chain_composition:
+                # Sequential composition
+                for i in range(1, chain_length):
+                    goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
+            else:
+                # Tree chain composition
+                goc_composed_function = perform_tree_chain_composition(goc_functions_for_chain)
             goc_compose_time = time.time() - start_goc
             if chain_length < 100 and num_breakpoints < 100:
                 print("GOC composed function:", goc_composed_function)
@@ -554,8 +580,13 @@ def benchmark_pwl_function_implementation(
             # Chain composition for nyr
             nyr_composed_function = nyr_functions_for_chain[0]
             start_nyr = time.time()
-            for i in range(1, chain_length):
-                nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain[i])
+            if not use_tree_chain_composition:
+                # Sequential composition
+                for i in range(1, chain_length):
+                    nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain)
+            else:
+                # Tree chain composition
+                nyr_composed_function = perform_tree_chain_composition(nyr_functions_for_chain[:chain_length])
             nyr_compose_time = time.time() - start_nyr
             if chain_length < 100 and num_breakpoints < 100:
                 print("Nyr composed function:", nyr_composed_function)
@@ -658,5 +689,6 @@ benchmark_pwl_function_implementation(
     composition_chain_lengths=[2, 5, 10, 100, 500],
     pwlf_nb_breakpoints=[6, 12, 100, 1000],
     check_functions=False,
-    non_decreasing=True
+    non_decreasing=True,
+    use_tree_chain_composition=True
 )

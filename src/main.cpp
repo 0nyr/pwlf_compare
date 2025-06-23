@@ -1534,6 +1534,10 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// Each point P(x, y) in f such that x \in g.image adds (a maximum of) a point to fog
 	// Edge case 1: If x corresponds to a step (vertical segment) on g, then this point has already been added in the previous step (continue)
 	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then these points have already been added in the previous step (continue)
+	double slope_g_piece =  0.0; 
+	double intercept_g_piece = 0.0;
+	size_t cached_j = f.xs.size(); // Avoid start at 0
+	
 	for (size_t i = 0; i < f.xs.size(); ++i)
 	{
 		double y_prime = f.ys[i];
@@ -1555,7 +1559,11 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		double g_y0 = g.ys[j];
 		double g_x1 = g.xs[j + 1];
 		double g_y1 = g.ys[j + 1];
-		double slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
+		if (j != cached_j) {
+			slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
+			intercept_g_piece = g_y0 - slope_g_piece * g_x0;
+			cached_j = j; // Cache the index for the next iteration
+		}
 
 		// #ifndef NDEBUG
 		// std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
@@ -1566,8 +1574,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		//    << std::endl;
 		// #endif
 
-		// If the matching g piece is horizontal, skip
 		// If x exactly matches a point on g (i.e. x is in g.ys_)
+		// or if the matching g piece is horizontal, skip
 		if (goc::epsilon_equal(g_y0, x)
 			|| goc::epsilon_equal(g_y1, x)
 			|| goc::epsilon_equal(slope_g_piece, 0.0)
@@ -1588,7 +1596,6 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 
 		// If the piece is not vertical, compute the x_prime value corresponding to y
 		// compute x_prime such that fog(x_prime) = y_prime
-		double intercept_g_piece = g_y0 - slope_g_piece * g_x0;
 		double x_prime = (x - intercept_g_piece) / slope_g_piece;
 		// Add the point to fog
 		fog_xs.push_back(x_prime);
@@ -1599,6 +1606,10 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// Each point P(x, y) in g such that y \in f.domain adds (at least) a point to fog
 	// Edge case 1: If f(y) corresponds to a step (vertical segment) on f, add 2 points to fog corresponding to the segment endpoints.
 	// Edge case 2: If f(y) corresponds to a flat (horizontal segment) on f, might need to remove the last added point if the one before also has same y value
+	double slope_f_piece =  0.0; 
+	double intercept_f_piece = 0.0;
+	cached_j = f.xs.size(); // Avoid start at 0
+	
 	for (size_t i = 0; i < g.ys.size(); ++i)
 	{
 		double x_prime = g.xs[i];
@@ -1618,7 +1629,12 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		double f_x1 = f.xs[j + 1];
 		double f_y0 = f.ys[j];
 		double f_y1 = f.ys[j + 1];
-		double slope_f_piece = std::abs((f_y1 - f_y0) / (f_x1 - f_x0));
+		if (j != cached_j) {
+			// If the piece has changed, compute the slope and intercept
+			slope_f_piece = (f_y1 - f_y0) / (f_x1 - f_x0);
+			intercept_f_piece = f_y0 - slope_f_piece * f_x0;
+			cached_j = j; // Update cached index
+		}
 
 		#ifndef NDEBUG
 		std::clog << "NDCPWLF::compose: f o g (FORWARD)"
@@ -1671,7 +1687,6 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 			// If the piece is not vertical or horizontal
 			// compute the y value corresponding to x
 			// fog(x) = f(y) = f_y0 + (f_y1 - f_y0) * (y - f_x0) / (f_x1 - f_x0)
-			double intercept_f_piece = f_y0 - slope_f_piece * f_x0;
 
 			#ifndef NDEBUG
 			if (goc::epsilon_equal(slope_f_piece, 0.0))
@@ -1689,6 +1704,10 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// but since fog is non-decreasing, we can sort both vectors
 	fog_xs.shrink_to_fit();
 	fog_ys.shrink_to_fit();
+	if (fog_xs.empty()) {
+		return nyr::NDCPWLF(); 
+	}
+
 	std::sort(fog_xs.begin(), fog_xs.end());
 	std::sort(fog_ys.begin(), fog_ys.end());
 
