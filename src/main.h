@@ -276,7 +276,9 @@ std::ostream& operator<<(std::ostream& os, const Printable& object);
 // ########## SEPARATOR ##########
 
 // Constant that represents the minimum granularity to be taken into account to compare numbers.
-const double EPS = 10e-6;
+constexpr double EPS = 10e-7;
+constexpr double EPS_SLOPE_ZERO = EPS*100; // Must be greater that classic EPS. Used with slope tests for special case where 2 slopes are close to 0.
+
 // Constant representing a number that is bigger than the numbers that will be used.
 const double INFTY = 10e50;
 
@@ -974,6 +976,16 @@ inline bool interval_vector_intersects(
 	if (v.empty() || w.empty()) return false; // empty intervals do not intersect
 	return !(goc::epsilon_smaller(v.back(), w.front()) ||
 			 goc::epsilon_bigger(v.front(), w.back()));
+}
+
+/// Do [v] and [w] not overlap at all?
+inline bool interval_vector_disjoints(
+	const std::vector<double>& v,
+	const std::vector<double>& w
+) {
+ if (v.empty() || w.empty()) return true; // empty intervals do not intersect
+ return goc::epsilon_smaller(v.back(), w.front()) ||
+	goc::epsilon_bigger(v.front(), w.back());
 }
 
 // Tests for the interval_vector functions.

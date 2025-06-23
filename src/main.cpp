@@ -1466,20 +1466,26 @@ bool nyr::NDCPWLF::check_normalization() const {
 		double y_next = ys[i+1];
 
 		// Denominators can definitly be zero
-		double slope1 = 0.0;
-		double slope2 = 0.0;
-		if (goc::epsilon_different(y_curr, y_prev)) {
-			slope1 = (y_curr - y_prev) / (x_curr - x_prev);
+		double slope1 =(y_curr - y_prev) / (x_curr - x_prev);
+		double slope2 = (y_next - y_curr) / (x_next - x_curr);
+		
+		// Edge case: comparing two slopes close to 0 is tricky.
+		if (slope1 < goc::EPS_SLOPE_ZERO) {
+			slope1 = 0.0; // Handle horizontal segments
 		}
-		if (goc::epsilon_different(y_next, y_curr)) {
-			slope2 = (y_next - y_curr) / (x_next - x_curr);
+		if (slope2 < goc::EPS_SLOPE_ZERO) {
+			slope2 = 0.0; // Handle horizontal segments
 		}
 
 		// If the slopes are not different, the current breakpoint is not necessary.
-		if (goc::epsilon_equal(slope1, slope2)) {
+		if (
+			goc::epsilon_equal(slope1, slope2)
+		) {
 			std::cerr << "Breakpoints are not normalized: "
 			          << "slope1 = " << slope1 << ", slope2 = " << slope2
-			          << " at index " << i
+			          << " slope1 ?= slope2: " << (goc::epsilon_equal(slope1, slope2) ? "true" : "false")
+					  << " slope diff: " << std::abs(slope1 - slope2)
+					  << " at index " << i
 					  << " (x_prev, y_prev) = (" << x_prev << ", " << y_prev << "), "
 					  << "(x_curr, y_curr) = (" << x_curr << ", " << y_curr << "), "
 					  << "(x_next, y_next) = (" << x_next << ", " << y_next << ")"
@@ -1499,10 +1505,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// 1. Pre-check
 	// If either function is empty, or if the image of g does not intersect the domain
 	// of f, the composition is an empty function.
-	if (f.empty() || g.empty() ||
-		// check if the image of g intersects the domain of f
-		!nyr::interval_vector_intersects(f.xs, g.ys)
-	) {
+	if (nyr::interval_vector_disjoints(f.xs, g.ys)) {
 		#ifndef NDEBUG
 		std::cerr << "Composition pre-check failed: "
 		          << "f.empty() = " << (f.empty() ? "true" : "false") << ", "
@@ -1510,8 +1513,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		          << "does g.image intersect f.domain: "
 				  << (nyr::interval_vector_intersects(f.xs, g.ys) ? "true" : "false")
 		          << std::endl;
-		return nyr::NDCPWLF(); // Return empty function
 		#endif
+		return nyr::NDCPWLF(); // Return empty function
 	}
 
 	// 2. Prepare fog
@@ -1525,6 +1528,72 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// Steps 3 and 4: Find all points P'(x', y') in fog.
 	// NOTE: Since fog is a NDCPWLF, we can add x' and y' in any order
 	// then sort fog_xs and fog_ys at the end.
+
+	// 3. Iterate over f points: (backward: y' given, need to compute x')
+	// NOTE: f has generally more points than g, so we iterate over f first.
+	// Each point P(x, y) in f such that x \in g.image adds (a maximum of) a point to fog
+	// Edge case 1: If x corresponds to a step (vertical segment) on g, then this point has already been added in the previous step (continue)
+	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then these points have already been added in the previous step (continue)
+	for (size_t i = 0; i < f.xs.size(); ++i)
+	{
+		double y_prime = f.ys[i];
+		double x = f.xs[i];
+		if (!interval_vector_includes(g.ys, x)) continue; // If x is not in g's image, skip
+
+		// Find the piece of g that contains x, using binary search.
+		// Here, it consists in finding the first index j such that g.ys_[j] <= x <= g.ys_[j+1]
+		auto it = std::lower_bound(g.ys.begin(), g.ys.end(), x);
+		#ifndef NDEBUG
+		if (it == g.ys.begin() || it == g.ys.end()) // Should never happen due to image check
+			throw std::out_of_range("NDCPWLF::evaluate: x is out of range for g.ys_. This should not happen due to pre-check.");
+		#endif
+		size_t j = (it - g.ys.begin()) - 1;
+
+		// If x \in g.xs_, then this point has already been added in the previous step, skip
+		// NOTE: Also prevent the case where the g piece is horizontal, i.e. g.xs_[j] == g.xs_[j + 1]
+		double g_x0 = g.xs[j];
+		double g_y0 = g.ys[j];
+		double g_x1 = g.xs[j + 1];
+		double g_y1 = g.ys[j + 1];
+		double slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
+
+		// #ifndef NDEBUG
+		// std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
+		// 	<< " for f point (" << x << ", " << y_prime << "),"
+		// 	<< " Evaluating piece " << j << " of g: (" 
+		//    << g_x0 << ", " << g_y0 << ") to (" << g_x1 << ", " << g_y1 
+		//    << "), slope: " << slope_g_piece 
+		//    << std::endl;
+		// #endif
+
+		// If the matching g piece is horizontal, skip
+		// If x exactly matches a point on g (i.e. x is in g.ys_)
+		if (goc::epsilon_equal(g_y0, x)
+			|| goc::epsilon_equal(g_y1, x)
+			|| goc::epsilon_equal(slope_g_piece, 0.0)
+		) {
+			continue;
+		}
+
+		// If the g piece is vertical, it has already been added in the previous step, skip
+		if (goc::epsilon_bigger_equal(slope_g_piece, goc::INFTY)
+		) {
+			continue;
+		}
+
+		#ifndef NDEBUG
+		if (goc::epsilon_equal(slope_g_piece, 0.0))
+				throw std::runtime_error("NDCPWLF::compose: Slope of piece is zero, which should have already been handled by the previous cases.");
+		#endif
+
+		// If the piece is not vertical, compute the x_prime value corresponding to y
+		// compute x_prime such that fog(x_prime) = y_prime
+		double intercept_g_piece = g_y0 - slope_g_piece * g_x0;
+		double x_prime = (x - intercept_g_piece) / slope_g_piece;
+		// Add the point to fog
+		fog_xs.push_back(x_prime);
+		fog_ys.push_back(y_prime);
+	}
 
 	// 4. FORWARD STEP: Iterate over g points (forward: x' given, need to compute y')
 	// Each point P(x, y) in g such that y \in f.domain adds (at least) a point to fog
@@ -1551,16 +1620,17 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		double f_y1 = f.ys[j + 1];
 		double slope_f_piece = std::abs((f_y1 - f_y0) / (f_x1 - f_x0));
 
-		// std::clog << "NDCPWLF::compose: f o g (FORWARD)"
-		// 	<< " for g point (" << x_prime << ", " << y << "),"
-		// 	<< " Evaluating piece " << j << " of f: ("
-		// 	<< f_x0 << ", " << f_y0 << ") -> ("
-		// 	<< f_x1 << ", " << f_y1 << ") with slope "
-		// 	<< slope_f_piece
-		// 	<< std::endl;
+		#ifndef NDEBUG
+		std::clog << "NDCPWLF::compose: f o g (FORWARD)"
+			<< " for g point (" << x_prime << ", " << y << "),"
+			<< " Evaluating piece " << j << " of f: ("
+			<< f_x0 << ", " << f_y0 << ") -> ("
+			<< f_x1 << ", " << f_y1 << ") with slope "
+			<< slope_f_piece
+			<< std::endl;
+		#endif
 
 		if (// Is the matching f piece vertical?
-			goc::epsilon_equal(f_x0, f_x1) || 
 			goc::epsilon_bigger_equal(slope_f_piece, goc::INFTY)
 		) {
 			// If the piece is vertical, add both endpoints
@@ -1579,8 +1649,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 			}
 		} else if (
 			// Is the matching f piece horizontal?
-			goc::epsilon_equal(f_y0, f_y1)
-			|| goc::epsilon_equal(slope_f_piece, 0.0) 
+			goc::epsilon_equal(slope_f_piece, 0.0)
 		) {
 			// If the piece is horizontal, remove the last added point if it is an intermediate (duplicate) point
 			double y_prime = f_y0; 
@@ -1591,6 +1660,10 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 				// Remove the last added point
 				fog_xs.pop_back();
 				fog_ys.pop_back();
+				#ifndef NDEBUG
+				std::clog << "NDCPWLF::compose: Removing duplicate point (" 
+			  		<< x_prime << ", " << y_prime << ") from fog." << std::endl;
+				#endif
 			}
 			fog_xs.push_back(x_prime);
 			fog_ys.push_back(y_prime);
@@ -1611,77 +1684,72 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		}
 	}
 
-	// 3. Iterate over f points: (backward: y' given, need to compute x')
-	// Each point P(x, y) in f such that x \in g.image adds (a maximum of) a point to fog
-	// Edge case 1: If x corresponds to a step (vertical segment) on g, then this point has already been added in the previous step (continue)
-	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then these points have already been added in the previous step (continue)
-	for (size_t i = 0; i < f.xs.size(); ++i)
-	{
-		double y_prime = f.ys[i];
-		double x = f.xs[i];
-		if (!interval_vector_includes(g.ys, x)) continue; // If x is not in g's image, skip
-
-		// Find the piece of g that contains x, using binary search.
-		// Here, it consists in finding the first index j such that g.ys_[j] <= x <= g.ys_[j+1]
-		auto it = std::lower_bound(g.ys.begin(), g.ys.end(), x);
-		#ifndef NDEBUG
-		if (it == g.ys.begin() || it == g.ys.end()) // Should never happen due to image check
-			throw std::out_of_range("NDCPWLF::evaluate: x is out of range for g.ys_. This should not happen due to pre-check.");
-		#endif
-		size_t j = (it - g.ys.begin()) - 1;
-
-		// If x \in g.xs_, then this point has already been added in the previous step, skip
-		// NOTE: Also prevent the case where the g piece is horizontal, i.e. g.xs_[j] == g.xs_[j + 1]
-		double g_x0 = g.xs[j];
-		double g_y0 = g.ys[j];
-		double g_x1 = g.xs[j + 1];
-		double g_y1 = g.ys[j + 1];
-		double slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
-		// std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
-		// 	<< " for f point (" << x << ", " << y_prime << "),"
-		// 	<< " Evaluating piece " << j << " of g: (" 
-		//    << g_x0 << ", " << g_y0 << ") to (" << g_x1 << ", " << g_y1 
-		//    << "), slope: " << slope_g_piece 
-		//    << std::endl;
-
-		if (
-			goc::epsilon_equal(g_y0, x)
-			|| goc::epsilon_equal(slope_g_piece, 0.0)
-		) {
-			continue;
-		}
-
-		// If the g piece is vertical, it has already been added in the previous step, skip
-		if (
-			goc::epsilon_equal(g_x0, g_x1)
-			|| goc::epsilon_bigger_equal(slope_g_piece, goc::INFTY)
-		) {
-			continue; 
-		}
-
-		#ifndef NDEBUG
-		if (goc::epsilon_equal(slope_g_piece, 0.0))
-				throw std::runtime_error("NDCPWLF::compose: Slope of piece is zero, which should have already been handled by the previous cases.");
-		#endif
-
-		// If the piece is not vertical, compute the x_prime value corresponding to y
-		// compute x_prime such that fog(x_prime) = y_prime
-		double intercept_g_piece = g_y0 - slope_g_piece * g_x0;
-		double x_prime = (x - intercept_g_piece) / slope_g_piece;
-		// Add the point to fog
-		fog_xs.push_back(x_prime);
-		fog_ys.push_back(y_prime);
-	}
-
 	// 4. Shrink vectors to fit the actual number of points 
-	// At this step, we should have added points to fog is the wrong order
+	// At this step, we should have added points to fog in the wrong order
 	// but since fog is non-decreasing, we can sort both vectors
 	fog_xs.shrink_to_fit();
 	fog_ys.shrink_to_fit();
 	std::sort(fog_xs.begin(), fog_xs.end());
 	std::sort(fog_ys.begin(), fog_ys.end());
 
-	return nyr::NDCPWLF(fog_xs, fog_ys);
+	std::vector<double> fog_xs_normalized;
+	std::vector<double> fog_ys_normalized;
+	fog_xs_normalized.reserve(fog_xs.size());
+ 	fog_ys_normalized.reserve(fog_ys.size());
+	
+	fog_xs_normalized.push_back(fog_xs[0]);
+	fog_ys_normalized.push_back(fog_ys[0]);
+
+	// std::clog << "NDCPWLF::compose: Nb points in fog before normalization: "
+	// 	   << fog_xs.size() << std::endl;
+
+	// 5. Remove intermediate points
+	// Check that no piece is the continuation of the previous piece.
+	for (size_t i = 1; i < fog_xs.size() - 1; ++i) {
+		double x_prev = fog_xs_normalized.back();
+		double y_prev = fog_ys_normalized.back();
+		double x_curr = fog_xs[i];
+		double y_curr = fog_ys[i];
+		double x_next = fog_xs[i+1];
+		double y_next = fog_ys[i+1];
+
+		// Denominators can definitly be zero
+		double slope1 = (y_curr - y_prev) / (x_curr - x_prev);
+		double slope2 = (y_next - y_curr) / (x_next - x_curr);
+
+		// Edge case: comparing two slopes close to 0 is tricky.
+		if (slope1 < goc::EPS_SLOPE_ZERO) {
+			slope1 = 0.0; // Handle horizontal segments
+		}
+		if (slope2 < goc::EPS_SLOPE_ZERO) {
+			slope2 = 0.0; // Handle horizontal segments
+		}
+
+		// Only add the current point if the slopes are different
+		if (goc::epsilon_different(slope1, slope2)) {
+			fog_xs_normalized.push_back(x_curr);
+			if (slope1 != 0.0) {
+				fog_ys_normalized.push_back(y_curr);
+			} else {
+				fog_ys_normalized.push_back(y_prev); // If horizontal, keep the previous y value
+			}
+		} else {
+			#ifndef NDEBUG
+			std::cout << "NDCPWLF::compose: Removing intermediate point at index " << i
+			<< " with coordinates (" << x_curr << ", " << y_curr << ")"
+			<< std::endl;
+			#endif
+		}
+	}
+	fog_xs_normalized.push_back(fog_xs.back());
+	fog_ys_normalized.push_back(fog_ys.back());
+	fog_xs_normalized.shrink_to_fit();
+ 	fog_ys_normalized.shrink_to_fit();
+
+	// std::clog << "NDCPWLF::compose: Nb points in fog after normalization: "
+	//  << fog_xs_normalized.size() << std::endl;
+
+	return nyr::NDCPWLF(fog_xs_normalized, fog_ys_normalized);
 }
 
 goc::PWLFunction nyr::NDCPWLF::to_goc_pwl_function() const {

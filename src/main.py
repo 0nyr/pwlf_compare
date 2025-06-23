@@ -415,9 +415,11 @@ def assert_non_decreasing_pwl_function(
         raise ValueError(f"{message}: xs and ys must have the same length")
 
     for i in range(1, len(xs)):
-        if xs[i] <= xs[i-1]:
+        # if xs[i] < xs[i-1]:
+        if pwlf_cpp.goc.epsilon_smaller(xs[i], xs[i-1]):
             raise ValueError(f"{message}: Non-increasing breakpoint: {xs[i-1]} → {xs[i]}")
-        if ys[i] < ys[i-1]:
+        # if ys[i] < ys[i-1]:
+        if pwlf_cpp.goc.epsilon_smaller(ys[i], ys[i-1]):
             raise ValueError(f"{message}: Non-decreasing violation at index {i}: {ys[i-1]} → {ys[i]}")
 
 def get_size_in_bytes(obj):
@@ -485,7 +487,7 @@ def benchmark_pwl_function_implementation(
                 x_breakpoints, y_values = generate_non_decreasing_raw_pwl_function(
                     num_breakpoints=num_breakpoints,
                     x_min=0.0,
-                    x_max=10000.0,
+                    x_max=100000.0,
                     y_min=1.0,
                     y_max=100.0
                 )
@@ -621,7 +623,7 @@ def benchmark_pwl_function_implementation(
             )
 
     # 3. Print the full results
-    print("\nFull benchmark results:")
+    print(f"\nFull benchmark results: [build type: {PWLF_BUILD_TYPE}]")
     print(df.to_markdown(index=False))
 
     # 5. Print total time and memory usage for each implementation
@@ -654,7 +656,7 @@ def benchmark_pwl_function_implementation(
 
 benchmark_pwl_function_implementation(
     composition_chain_lengths=[2, 5, 10, 100, 500],
-    pwlf_nb_breakpoints=[6, 11, 101, 1001, 10001],
+    pwlf_nb_breakpoints=[6, 12, 100, 1000],
     check_functions=False,
     non_decreasing=True
 )
