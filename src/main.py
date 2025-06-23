@@ -572,7 +572,7 @@ def benchmark_pwl_function_implementation(
                     goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
             else:
                 # Tree chain composition
-                goc_composed_function = perform_tree_chain_composition(goc_functions_for_chain)
+                goc_composed_function = perform_tree_chain_composition(goc_functions_for_chain[:chain_length])
             goc_compose_time = time.time() - start_goc
             if chain_length < 100 and num_breakpoints < 100:
                 print("GOC composed function:", goc_composed_function)
