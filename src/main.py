@@ -6,7 +6,7 @@ from utils.utils import get_a_parent_dir
 
 PROJECT_ROOT = get_a_parent_dir(os.path.dirname(__file__), 1)
 
-PWLF_BUILD_TYPE = "debug" # "debug" or "release"
+PWLF_BUILD_TYPE = "release" # "debug" or "release"
 PWLF_DIR = os.path.join(
     PROJECT_ROOT,
     f"build/{PWLF_BUILD_TYPE}"
@@ -483,7 +483,11 @@ def benchmark_pwl_function_implementation(
         for i in range(max_chain_length):
             if non_decreasing:
                 x_breakpoints, y_values = generate_non_decreasing_raw_pwl_function(
-                    num_breakpoints=num_breakpoints
+                    num_breakpoints=num_breakpoints,
+                    x_min=0.0,
+                    x_max=10000.0,
+                    y_min=1.0,
+                    y_max=100.0
                 )
                 assert_non_decreasing_pwl_function(
                     xs=x_breakpoints,
@@ -593,6 +597,10 @@ def benchmark_pwl_function_implementation(
                     goc_composed_function.piece_count(),
                     nyr_composed_function.nb_pieces()
                 ],
+                "Area": [
+                    goc_composed_function.compute_area(),
+                    nyr_composed_function.compute_area()
+                ],
                 "Memory Used (Bytes)": [
                     get_size_in_bytes(goc_composed_function),
                     get_size_in_bytes(nyr_composed_function)
@@ -643,8 +651,8 @@ def benchmark_pwl_function_implementation(
 
 
 benchmark_pwl_function_implementation(
-    composition_chain_lengths=[2],
-    pwlf_nb_breakpoints=[6],
+    composition_chain_lengths=[2, 5, 10, 100, 1000],
+    pwlf_nb_breakpoints=[6, 11, 101, 1001],
     check_functions=True,
     non_decreasing=True
 )

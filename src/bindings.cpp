@@ -196,7 +196,8 @@ PYBIND11_MODULE(pwlf_cpp, m) {
             f.Print(oss);
             return oss.str();
         })
-        .def("memory_footprint_bytes", &goc::PWLFunction::memory_footprint_bytes, "Get total memory footprint in bytes");
+        .def("memory_footprint_bytes", &goc::PWLFunction::memory_footprint_bytes, "Get total memory footprint in bytes")
+        .def("compute_area", &goc::PWLFunction::compute_area, "Compute area under the function");
 
     // PWL function standalone functions
     goc.def("dom", py::overload_cast<const goc::PWLFunction&>(&goc::dom), "Get function domain");
@@ -303,7 +304,8 @@ PYBIND11_MODULE(pwlf_cpp, m) {
             std::ostringstream oss;
             f.Print(oss);
             return oss.str();
-        });
+        })
+        .def("compute_area", &nyr::NDCPWLF::compute_area, "Compute area under the function");
 
     // ==================== ADDITIONAL UTILITY FUNCTIONS ====================
     

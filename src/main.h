@@ -626,7 +626,19 @@ public:
 	// Returns the total memory footprint of *this* object, in bytes,
 	// including both the fixed‐size portion (sizeof(*this)) and any
 	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;	
+	std::size_t memory_footprint_bytes() const;
+
+	/**
+	 * @brief Computes the area under the non-decreasing continuous piecewise linear function.
+	 * * This function calculates the definite integral of the function from its
+	 * minimum domain value to its maximum domain value. It achieves this by
+	 * summing the areas of the trapezoids formed by each linear piece and the x-axis.
+	 * * For each segment from (x_i, y_i) to (x_{i+1}, y_{i+1}), the area of the
+	 * trapezoid is calculated as: (y_i + y_{i+1}) * (x_{i+1} - x_i) / 2.0.
+	 * * Vertical segments (where x_{i+1} - x_i == 0) correctly contribute 0 area.
+	 * * @return The total area under the function. Returns 0.0 if the function is empty.
+	 */
+	double compute_area() const;
 private:
 	// Updates the image_ attribute to keep it updated after a Pop() operation.
 	void UpdateImage();
@@ -906,7 +918,19 @@ public:
 	// Returns the total memory footprint of *this* object, in bytes,
 	// including both the fixed‐size portion (sizeof(*this)) and any
 	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;	
+	std::size_t memory_footprint_bytes() const;
+
+	/**
+	 * @brief Computes the area under the non-decreasing continuous piecewise linear function.
+	 * * This function calculates the definite integral of the function from its
+	 * minimum domain value to its maximum domain value. It achieves this by
+	 * summing the areas of the trapezoids formed by each linear piece and the x-axis.
+	 * * For each segment from (x_i, y_i) to (x_{i+1}, y_{i+1}), the area of the
+	 * trapezoid is calculated as: (y_i + y_{i+1}) * (x_{i+1} - x_i) / 2.0.
+	 * * Vertical segments (where x_{i+1} - x_i == 0) correctly contribute 0 area.
+	 * * @return The total area under the function. Returns 0.0 if the function is empty.
+	 */
+	double compute_area() const;
 };
 
 /// “Is empty” in the same sense as Interval::Empty().

@@ -930,6 +930,19 @@ std::size_t PWLFunction::memory_footprint_bytes() const {
          + pieces_.capacity() * sizeof(LinearFunction);
 }
 
+double PWLFunction::compute_area() const 
+{
+	double area = 0.0;
+	for (const auto& piece : pieces_) {
+		// Area under the piece is the trapezoidal area
+        // - base1 is y1 (the y-value at the start of the segment)
+        // - base2 is y2 (the y-value at the end of the segment)
+        // - height is (x2 - x1) (the width of the segment along the x-axis)
+		area += ((piece.Value(piece.domain.left) + piece.Value(piece.domain.right)) * (piece.domain.right - piece.domain.left)) / 2.0;
+	}
+	return area;
+}
+
 } // namespace goc
 // #################### NAMESPACE END ####################
 
@@ -1528,13 +1541,22 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		if (it == f.xs.begin() || it == f.xs.end()) // Should never happen due to domain check
 			throw std::out_of_range("NDCPWLF::evaluate: y is out of range for f.xs_. This should not happen due to pre-check.");
 		#endif
-		size_t j = (it - f.xs.begin());
+		size_t j = (it - f.xs.begin()) - 1;
 
 		double f_x0 = f.xs[j];
 		double f_x1 = f.xs[j + 1];
 		double f_y0 = f.ys[j];
 		double f_y1 = f.ys[j + 1];
 		double slope_f_piece = std::abs((f_y1 - f_y0) / (f_x1 - f_x0));
+
+		std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
+			<< " for g point (" << x_prime << ", " << y << "),"
+			<< " Evaluating piece " << j << " of f: ("
+			<< f_x0 << ", " << f_y0 << ") -> ("
+			<< f_x1 << ", " << f_y1 << ") with slope "
+			<< slope_f_piece
+			<< std::endl;
+
 		if (// Is the matching f piece vertical?
 			goc::epsilon_equal(f_x0, f_x1) || 
 			goc::epsilon_bigger_equal(slope_f_piece, goc::INFTY)
@@ -1590,7 +1612,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 	// 3. Iterate over f points: (backward: y' given, need to compute x')
 	// Each point P(x, y) in f such that x \in g.image adds (a maximum of) a point to fog
 	// Edge case 1: If x corresponds to a step (vertical segment) on g, then this point has already been added in the previous step (continue)
-	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then this point has already been added in the previous step (continue)
+	// Edge case 2: If x corresponds precisely to a point on g (i.e. x is in g.ys_), then these points have already been added in the previous step (continue)
 	for (size_t i = 0; i < f.xs.size(); ++i)
 	{
 		double y_prime = f.ys[i];
@@ -1604,7 +1626,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		if (it == g.ys.begin() || it == g.ys.end()) // Should never happen due to image check
 			throw std::out_of_range("NDCPWLF::evaluate: x is out of range for g.ys_. This should not happen due to pre-check.");
 		#endif
-		size_t j = (it - g.ys.begin());
+		size_t j = (it - g.ys.begin()) - 1;
 
 		// If x \in g.xs_, then this point has already been added in the previous step, skip
 		// NOTE: Also prevent the case where the g piece is horizontal, i.e. g.xs_[j] == g.xs_[j + 1]
@@ -1613,6 +1635,13 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		double g_x1 = g.xs[j + 1];
 		double g_y1 = g.ys[j + 1];
 		double slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
+		std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
+			<< " for f point (" << x << ", " << y_prime << "),"
+			<< " Evaluating piece " << j << " of g: (" 
+		   << g_x0 << ", " << g_y0 << ") to (" << g_x1 << ", " << g_y1 
+		   << "), slope: " << slope_g_piece 
+		   << std::endl;
+
 		if (
 			goc::epsilon_equal(g_y0, x)
 			|| goc::epsilon_equal(slope_g_piece, 0.0)
@@ -1691,6 +1720,46 @@ std::size_t nyr::NDCPWLF::memory_footprint_bytes() const {
 	return sizeof(*this)
 		 + xs.capacity() * sizeof(double)
 		 + ys.capacity() * sizeof(double);
+}
+
+double NDCPWLF::compute_area() const {
+    // If the function has no pieces (i.e., it's empty), the area under it is 0.
+    if (empty()) {
+        return 0.0;
+    }
+
+    double total_area = 0.0; // Initialize the accumulated area.
+
+    // Iterate through each linear piece (segment) of the function.
+    // A function with 'N' breakpoints has 'N-1' pieces.
+    // The 'nb_pieces()' method returns xs.size() - 1 when not empty.
+    for (size_t i = 0; i < nb_pieces(); ++i) {
+        // Get the coordinates of the start point of the current piece.
+        const double x1 = xs[i];
+        const double y1 = ys[i];
+
+        // Get the coordinates of the end point of the current piece.
+        const double x2 = xs[i+1];
+        const double y2 = ys[i+1];
+
+		const double slope = std::abs((y2 - y1) / (x2 - x1));
+		if (// Is the matching f piece vertical?
+			goc::epsilon_equal(x1, x2)
+			|| goc::epsilon_bigger_equal(slope, goc::INFTY)
+		) {
+			continue; // A vertical segment has 0 area under it.
+		}
+
+        // Calculate the area of the trapezoid formed by the current piece and the x-axis.
+        // The formula for the area of a trapezoid is ((base1 + base2) / 2) * height.
+        // In this context:
+        // - base1 is y1 (the y-value at the start of the segment)
+        // - base2 is y2 (the y-value at the end of the segment)
+        // - height is (x2 - x1) (the width of the segment along the x-axis)
+        total_area += ((y1 + y2) * (x2 - x1)) / 2.0;
+    }
+
+    return total_area; // Return the accumulated total area.
 }
 
 void test_interval_vector_intersects() {
