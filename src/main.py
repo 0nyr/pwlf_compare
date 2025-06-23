@@ -546,7 +546,8 @@ def benchmark_pwl_function_implementation(
             for i in range(1, chain_length):
                 goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
             goc_compose_time = time.time() - start_goc
-            print("GOC composed function:", goc_composed_function)
+            if chain_length < 100 and num_breakpoints < 100:
+                print("GOC composed function:", goc_composed_function)
 
             # Chain composition for nyr
             nyr_composed_function = nyr_functions_for_chain[0]
@@ -554,7 +555,8 @@ def benchmark_pwl_function_implementation(
             for i in range(1, chain_length):
                 nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain[i])
             nyr_compose_time = time.time() - start_nyr
-            print("Nyr composed function:", nyr_composed_function)
+            if chain_length < 100 and num_breakpoints < 100:
+                print("Nyr composed function:", nyr_composed_function)
 
             if non_decreasing:
                 try:
@@ -574,14 +576,14 @@ def benchmark_pwl_function_implementation(
 
             # if num_breakpoints == 6 and chain_length == 5:
             # if num_breakpoints == 1001 and chain_length == 10:
-                plot_goc_pwl_function(
-                    pwl_function=goc_composed_function,
-                    plot_subname="goc_composed"
-                )
-                plot_nyr_cpwlf_function(
-                    cpwlf_function=nyr_composed_function,
-                    plot_subname="nyr_composed"
-                )
+                # plot_goc_pwl_function(
+                #     pwl_function=goc_composed_function,
+                #     plot_subname="goc_composed"
+                # )
+                # plot_nyr_cpwlf_function(
+                #     cpwlf_function=nyr_composed_function,
+                #     plot_subname="nyr_composed"
+                # )
 
             #print(goc_composed_function.copy_breakpoints_and_values())
 
@@ -651,8 +653,8 @@ def benchmark_pwl_function_implementation(
 
 
 benchmark_pwl_function_implementation(
-    composition_chain_lengths=[2, 5, 10, 100, 1000],
-    pwlf_nb_breakpoints=[6, 11, 101, 1001],
-    check_functions=True,
+    composition_chain_lengths=[2, 5, 10, 100, 500],
+    pwlf_nb_breakpoints=[6, 11, 101, 1001, 10001],
+    check_functions=False,
     non_decreasing=True
 )

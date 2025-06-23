@@ -1503,6 +1503,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		// check if the image of g intersects the domain of f
 		!nyr::interval_vector_intersects(f.xs, g.ys)
 	) {
+		#ifndef NDEBUG
 		std::cerr << "Composition pre-check failed: "
 		          << "f.empty() = " << (f.empty() ? "true" : "false") << ", "
 		          << "g.empty() = " << (g.empty() ? "true" : "false") << ", "
@@ -1510,6 +1511,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 				  << (nyr::interval_vector_intersects(f.xs, g.ys) ? "true" : "false")
 		          << std::endl;
 		return nyr::NDCPWLF(); // Return empty function
+		#endif
 	}
 
 	// 2. Prepare fog
@@ -1549,13 +1551,13 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		double f_y1 = f.ys[j + 1];
 		double slope_f_piece = std::abs((f_y1 - f_y0) / (f_x1 - f_x0));
 
-		std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
-			<< " for g point (" << x_prime << ", " << y << "),"
-			<< " Evaluating piece " << j << " of f: ("
-			<< f_x0 << ", " << f_y0 << ") -> ("
-			<< f_x1 << ", " << f_y1 << ") with slope "
-			<< slope_f_piece
-			<< std::endl;
+		// std::clog << "NDCPWLF::compose: f o g (FORWARD)"
+		// 	<< " for g point (" << x_prime << ", " << y << "),"
+		// 	<< " Evaluating piece " << j << " of f: ("
+		// 	<< f_x0 << ", " << f_y0 << ") -> ("
+		// 	<< f_x1 << ", " << f_y1 << ") with slope "
+		// 	<< slope_f_piece
+		// 	<< std::endl;
 
 		if (// Is the matching f piece vertical?
 			goc::epsilon_equal(f_x0, f_x1) || 
@@ -1635,12 +1637,12 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
 		double g_x1 = g.xs[j + 1];
 		double g_y1 = g.ys[j + 1];
 		double slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
-		std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
-			<< " for f point (" << x << ", " << y_prime << "),"
-			<< " Evaluating piece " << j << " of g: (" 
-		   << g_x0 << ", " << g_y0 << ") to (" << g_x1 << ", " << g_y1 
-		   << "), slope: " << slope_g_piece 
-		   << std::endl;
+		// std::clog << "NDCPWLF::compose: f o g (BACKWARD)"
+		// 	<< " for f point (" << x << ", " << y_prime << "),"
+		// 	<< " Evaluating piece " << j << " of g: (" 
+		//    << g_x0 << ", " << g_y0 << ") to (" << g_x1 << ", " << g_y1 
+		//    << "), slope: " << slope_g_piece 
+		//    << std::endl;
 
 		if (
 			goc::epsilon_equal(g_y0, x)
