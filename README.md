@@ -1,5 +1,7 @@
 # Compare & benchmark PWLF implementations
 
+Testing and benchmarking implementation of Non Decreasing Continuous PieceWise Linear Functions. Such functions are crucial for Duration calculation when working in the context of Time-Dependent Routing Problems.
+
 ## Commands
 
 ##### Compile

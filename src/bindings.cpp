@@ -284,6 +284,9 @@ PYBIND11_MODULE(pwlf_cpp, m) {
              py::arg("g"))
         .def("compose_visser", &nyr::NDCPWLF::compose_visser, "Compose with Visser's method without normalization",
              py::arg("g"))
+        .def("compose_visser_normalization", &nyr::NDCPWLF::compose_visser_normalization,
+            "Compose with Visser's method with normalization",
+            py::arg("g"))
         .def("to_goc_pwl_function", &nyr::NDCPWLF::to_goc_pwl_function, "Convert to GOC PWL function")
         .def("get_min_domain", &nyr::NDCPWLF::get_min_domain, "Get minimum domain value")
         .def("get_max_domain", &nyr::NDCPWLF::get_max_domain, "Get maximum domain value")

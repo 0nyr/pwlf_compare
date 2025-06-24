@@ -1718,7 +1718,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
     std::vector<double> fog_xs_normalized;
     std::vector<double> fog_ys_normalized;
     fog_xs_normalized.reserve(fog_xs.size());
-     fog_ys_normalized.reserve(fog_ys.size());
+    fog_ys_normalized.reserve(fog_ys.size());
     
     fog_xs_normalized.push_back(fog_xs[0]);
     fog_ys_normalized.push_back(fog_ys[0]);
@@ -1767,7 +1767,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
     fog_xs_normalized.push_back(fog_xs.back());
     fog_ys_normalized.push_back(fog_ys.back());
     fog_xs_normalized.shrink_to_fit();
-     fog_ys_normalized.shrink_to_fit();
+    fog_ys_normalized.shrink_to_fit();
 
     // std::clog << "NDCPWLF::compose: Nb points in fog after normalization: "
     //  << fog_xs_normalized.size() << std::endl;
@@ -1919,6 +1919,209 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
     fog_ys.shrink_to_fit();
 
     return nyr::NDCPWLF(fog_xs, fog_ys);
+}
+
+nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) const {
+    const auto& f = *this;
+
+    // 1. Pre-check
+    // If either function is empty, or if the image of g does not intersect the domain
+    // of f, the composition is an empty function.
+    if (nyr::interval_vector_disjoints(f.xs, g.ys)) {
+        #ifndef NDEBUG
+        std::cerr << "Composition pre-check failed: "
+                  << "f.empty() = " << (f.empty() ? "true" : "false") << ", "
+                  << "g.empty() = " << (g.empty() ? "true" : "false") << ", "
+                  << "does g.image intersect f.domain: "
+                  << (nyr::interval_vector_intersects(f.xs, g.ys) ? "true" : "false")
+                  << std::endl;
+        #endif
+        return nyr::NDCPWLF(); // Return empty function
+    }
+
+    // 2. Prepare fog
+    std::vector<double> fog_xs;
+    std::vector<double> fog_ys;
+    // By theorem, fog has at most f.xs_.size() * g.ys_.size() - 1 points.
+    // So reserve space for the worst case, and shrink later.
+    const size_t nb_sum_points =  f.xs.size() + g.ys.size(); 
+    fog_xs.reserve(nb_sum_points - 1);
+    fog_ys.reserve(nb_sum_points - 1);
+
+    // 3. Find all points P'(x', y') in fog.
+    // Following Visser et al 2020: Efficient Move Evaluations for 
+    // Time-Dependent Vehicle Routing Problems, Theorem 3, p4-5.
+    size_t i = 0, j = 0;
+    double slope_f_piece = 0.0;
+    double intercept_f_piece = 0.0;
+    double slope_g_piece = 0.0;
+    double intercept_g_piece = 0.0;
+    if (f.xs.size() > 1) {
+        // Compute slope and intercept for the first piece of f
+        slope_f_piece = compute_raw_slope(f.xs[0], f.ys[0], f.xs[1], f.ys[1]);
+        intercept_f_piece = compute_raw_intercept(f.xs[0], f.ys[0], slope_f_piece);
+    }
+    if (g.ys.size() > 1) {
+        // Compute slope and intercept for the first piece of g
+        slope_g_piece = compute_raw_slope(g.xs[0], g.ys[0], g.xs[1], g.ys[1]);
+        intercept_g_piece = compute_raw_intercept(g.xs[0], g.ys[0], slope_g_piece);
+    }
+
+    while (i < f.xs.size() && j < g.ys.size()) {
+        double g_y = g.ys[j];
+        double f_x = f.xs[i];
+        if (goc::epsilon_bigger(g_y, f_x)) {
+            // BACKWARD STEP: From f to g
+            double y_prime = f.ys[i];
+            if (interval_vector_includes(g.ys, f_x)) {
+                double x_prime = (f_x - intercept_g_piece) / slope_g_piece;
+                // Add the point (x', y') to fog
+                fog_xs.push_back(x_prime);
+                fog_ys.push_back(y_prime);
+
+                #ifndef NDEBUG
+                std::clog << "NDCPWLF::compose_visser: Backward step from f to g."
+                    << " i = "  << i
+                    << ", j = " << j
+                    << ", g_y = " << g_y
+                    << ", f_x = " << f_x
+                    << ", f_y = y_prime = " << y_prime
+                    << ", piece of g at j = " << j 
+                    << " of domain: [" << g.xs[j - 1] << ", " << g.xs[j] << "]"
+                    << " and image: [" << g.ys[j - 1] << ", " << g.ys[j] << "]"
+                    << ", slope_g_piece = " << slope_g_piece
+                    << ", intercept_g_piece = " << intercept_g_piece
+                    << ", obtained x_prime = " << x_prime
+                    << ". Adding point (" << x_prime << ", " << y_prime << ")"
+                    << std::endl;
+                #endif
+            }
+            // i has changed, so we need to recompute the slope and intercept
+            if (i < f.xs.size() - 1) {
+                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+            }
+            i += 1; // Move to next point of f
+        } else if (goc::epsilon_equal(g_y, f_x)) {
+            // Matching breakpoint from g to f. 
+            double x_prime = g.xs[j];
+            double y_prime = f.ys[i];
+            // Add the point (x', y') to fog
+            fog_xs.push_back(x_prime);
+            fog_ys.push_back(y_prime);
+
+            if (i < f.xs.size() - 1) {
+                // Recompute the slope and intercept for the next piece of f
+                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+            }
+            i += 1; // Move to next point of f
+            if (j < g.ys.size() - 1) {
+                // Recompute the slope and intercept for the next piece of g
+                slope_g_piece = compute_raw_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
+                intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
+            }
+            j += 1; // Move to next point of g
+
+            #ifndef NDEBUG
+            std::clog << "NDCPWLF::compose_visser: Matching breakpoint found."
+                << " Adding point (" << x_prime << ", " << y_prime << ")" 
+                << std::endl;
+            #endif
+        } else {
+            // FORWARD STEP: From g to f
+            if (interval_vector_includes(f.xs, g_y)) {
+                double x_prime = g.xs[j];
+                // Get the piece of f that contains g_y
+                // This is the last piece i
+                double y_prime = slope_f_piece * g_y + intercept_f_piece;
+                // Add the point (x', y') to fog
+                fog_xs.push_back(x_prime);
+                fog_ys.push_back(y_prime);
+
+                #ifndef NDEBUG
+                std::clog << "NDCPWLF::compose_visser: Forward step from g to f."
+                    << " i = "  << i 
+                    << ", j = " << j 
+                    << ", g_y = " << g_y 
+                    << ", f_x = " << f_x
+                    << ", piece of f at i = " << i << " (f.xs[i] = " << f.ys[i] <<")"
+                    << ", slope_f_piece = " << slope_f_piece
+                    << ", intercept_f_piece = " << intercept_f_piece    
+                    << ". Adding point (" << x_prime << ", " << y_prime << ")"
+                    << std::endl;
+                #endif
+            }
+            // j has changed, so we need to recompute the slope and intercept
+            if (j < g.ys.size()) {
+                slope_g_piece = compute_raw_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
+                intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
+            }
+            j += 1; // Move to next point of g
+        } 
+    }
+    
+    if (fog_xs.size() <= 2) {
+        return nyr::NDCPWLF(fog_xs, fog_ys);
+    }
+    std::vector<double> fog_xs_normalized;
+    std::vector<double> fog_ys_normalized;
+    fog_xs_normalized.reserve(fog_xs.size());
+    fog_ys_normalized.reserve(fog_ys.size());
+    
+    fog_xs_normalized.push_back(fog_xs[0]);
+    fog_ys_normalized.push_back(fog_ys[0]);
+
+    // std::clog << "NDCPWLF::compose: Nb points in fog before normalization: "
+    //        << fog_xs.size() << std::endl;
+
+    // 4. Normalizatiion: Remove redundant intermediate points
+    // Check that no piece is the continuation of the previous piece.
+    for (size_t i = 1; i < fog_xs.size() - 1; ++i) {
+        double x_prev = fog_xs_normalized.back();
+        double y_prev = fog_ys_normalized.back();
+        double x_curr = fog_xs[i];
+        double y_curr = fog_ys[i];
+        double x_next = fog_xs[i+1];
+        double y_next = fog_ys[i+1];
+
+        // Denominators can definitly be zero
+        double slope1 = (y_curr - y_prev) / (x_curr - x_prev);
+        double slope2 = (y_next - y_curr) / (x_next - x_curr);
+
+        // Edge case: comparing two slopes close to 0 is tricky.
+        if (slope1 < goc::EPS_SLOPE_ZERO) {
+            slope1 = 0.0; // Handle horizontal segments
+        }
+        if (slope2 < goc::EPS_SLOPE_ZERO) {
+            slope2 = 0.0; // Handle horizontal segments
+        }
+
+        // Only add the current point if the slopes are different
+        if (goc::epsilon_different(slope1, slope2)) {
+            fog_xs_normalized.push_back(x_curr);
+            if (slope1 != 0.0) {
+                fog_ys_normalized.push_back(y_curr);
+            } else {
+                fog_ys_normalized.push_back(y_prev); // If horizontal, keep the previous y value
+            }
+        } else {
+            #ifndef NDEBUG
+            std::cout << "NDCPWLF::compose: Removing intermediate point at index " << i
+            << " with coordinates (" << x_curr << ", " << y_curr << ")"
+            << std::endl;
+            #endif
+        }
+    }
+    fog_xs_normalized.push_back(fog_xs.back());
+    fog_ys_normalized.push_back(fog_ys.back());
+    fog_xs_normalized.shrink_to_fit();
+    fog_ys_normalized.shrink_to_fit();
+
+    // std::clog << "NDCPWLF::compose: Nb points in fog after normalization: "
+    //  << fog_xs_normalized.size() << std::endl;
+
+    return nyr::NDCPWLF(fog_xs_normalized, fog_ys_normalized);
 }
 
 goc::PWLFunction nyr::NDCPWLF::to_goc_pwl_function() const {

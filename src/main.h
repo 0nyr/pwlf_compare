@@ -889,8 +889,8 @@ public:
 	NDCPWLF compose_visser(const NDCPWLF& g) const;
 
 	// Composition with Visser's method
-	// Improved with normalization.
-	NDCPWLF compose_opt(const NDCPWLF& g) const;
+	// Improved with post-normalization.
+	NDCPWLF compose_visser_normalization(const NDCPWLF& g) const;
 
     goc::PWLFunction to_goc_pwl_function() const;
 

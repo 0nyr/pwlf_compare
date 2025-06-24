@@ -59,6 +59,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 import time
+from enum import Enum, auto
 
 def plot_raw_pwl_function(
     x_breakpoints: list,
@@ -475,6 +476,30 @@ def test_bounded_slope_pwl_generation():
         plot_subname="slope_bounding_example"
     )
 
+def perform_tree_chain_composition(
+            functions: list[pwlf_cpp.goc.PWLFunction | pwlf_cpp.nyr.NDCPWLF],
+            compose_method_name: str = "compose"
+        ):
+            """
+            Perform tree chain composition of the given functions.
+            0nyr implementation test from Visser et al. 2020.
+            """
+            composed_functions = functions # reference
+            if len(functions) == 1:
+                return functions[0]
+            while len(composed_functions) > 1:
+                next_composed_functions = []
+                for i in range(0, len(composed_functions) // 2):
+                    # Compose pairs of functions
+                    f1 = composed_functions[2 * i]
+                    f2 = composed_functions[2 * i + 1]
+                    next_composed_functions.append(
+                        getattr(f1, compose_method_name)(f2)
+                    )
+                composed_functions = next_composed_functions
+
+            return composed_functions[0]
+
 def benchmark_pwl_function_implementation(
         composition_chain_lengths: list[int],
         pwlf_nb_breakpoints: list[int],
@@ -554,26 +579,6 @@ def benchmark_pwl_function_implementation(
         #     plot_subname="goc_chain"
         # )
 
-        def perform_tree_chain_composition(
-            functions: list[pwlf_cpp.goc.PWLFunction | pwlf_cpp.nyr.NDCPWLF]
-        ):
-            """
-            Perform tree chain composition of the given functions.
-            """
-            composed_functions = functions # reference
-            if len(functions) == 1:
-                return functions[0]
-            while len(composed_functions) > 1:
-                next_composed_functions = []
-                for i in range(0, len(composed_functions) // 2):
-                    # Compose pairs of functions
-                    f1 = composed_functions[2 * i]
-                    f2 = composed_functions[2 * i + 1]
-                    next_composed_functions.append(f1.compose(f2))
-                composed_functions = next_composed_functions
-
-            return composed_functions[0]
-
         # 2. Perform compositions
         for chain_length in composition_chain_lengths:
             # Chain composition for goc
@@ -596,7 +601,7 @@ def benchmark_pwl_function_implementation(
             if not use_tree_chain_composition:
                 # Sequential composition
                 for i in range(1, chain_length):
-                    nyr_composed_function = nyr_composed_function.compose_visser(nyr_functions_for_chain[i])
+                    nyr_composed_function = nyr_composed_function.compose_visser_normalization(nyr_functions_for_chain[i])
             else:
                 # Tree chain composition
                 nyr_composed_function = perform_tree_chain_composition(nyr_functions_for_chain[:chain_length])
@@ -662,7 +667,7 @@ def benchmark_pwl_function_implementation(
 
             df_current_stats = pd.DataFrame(stats)
             print(df_current_stats.to_markdown(index=False))
-            df = pd.concat(
+            df: pd.DataFrame = pd.concat(
                 [df, pd.DataFrame(stats)],
                 ignore_index=True
             )
@@ -699,14 +704,14 @@ def benchmark_pwl_function_implementation(
         print("Both implementations use the same amount of memory.")
 
 
-benchmark_pwl_function_implementation(
-    composition_chain_lengths=[2, 5, 10, 100, 500],
-    pwlf_nb_breakpoints=[6, 12, 100, 1000],
-    check_functions=False,
-    non_decreasing=True,
-    use_tree_chain_composition=False,
-    plot_composed_functions=False
-)
+# benchmark_pwl_function_implementation(
+#     composition_chain_lengths=[2, 5, 10, 100, 500],
+#     pwlf_nb_breakpoints=[6, 12, 100, 1000],
+#     check_functions=False,
+#     non_decreasing=True,
+#     use_tree_chain_composition=False,
+#     plot_composed_functions=False
+# )
 
 # benchmark_pwl_function_implementation(
 #     composition_chain_lengths=[2],
@@ -716,3 +721,154 @@ benchmark_pwl_function_implementation(
 #     use_tree_chain_composition=False,
 #     plot_composed_functions=True
 # )
+
+
+
+def benchmark_given_ndcpwlf_composition(
+    composition_chain_lengths: list[int],
+    pwlf_nb_breakpoints: list[int],
+):
+    df = pd.DataFrame()
+
+    # 1. Prepare the list of functions to benchmark
+    FUNCTION_VERSIONS = [
+        ("goc", "lera2020", "compose"),
+        ("nyr", "alterative", "compose"),
+        ("nyr", "visser2020", "compose_visser"),
+        ("nyr", "visser+nor",  "compose_visser_normalization"),
+    ]
+    for (libtype, name, compose_method) in FUNCTION_VERSIONS.copy():
+        FUNCTION_VERSIONS.append((libtype, name+"+tree", compose_method))
+    
+    # sort by name
+    FUNCTION_VERSIONS.sort(key=lambda x: x[1])
+
+    print(f"Benchmarking {len(FUNCTION_VERSIONS)} function versions:")
+    print(FUNCTION_VERSIONS) 
+
+    for num_breakpoints in pwlf_nb_breakpoints:
+
+        # 1. Generate a chain of PWL functions
+        max_chain_length = max(composition_chain_lengths)
+        goc_functions_for_chain = []
+        nyr_functions_for_chain = []
+        for i in range(max_chain_length):
+            x_breakpoints, y_values = generate_non_decreasing_raw_pwl_function(
+                    num_breakpoints=num_breakpoints,
+                    x_min=0.0,
+                    x_max=100000.0,
+                    y_min=1.0,
+                    y_max=100.0
+                )
+            goc_functions_for_chain.append(
+                pwlf_cpp.goc.PWLFunction(x_breakpoints, y_values)
+            )
+            nyr_functions_for_chain.append(
+                pwlf_cpp.nyr.NDCPWLF(x_breakpoints, y_values)
+            )
+
+        # 2. Perform compositions
+        start_nb_pieces = goc_functions_for_chain[0].piece_count()
+
+        for chain_length in composition_chain_lengths:
+            for libtype, name, compose_method in FUNCTION_VERSIONS:
+                
+                num_pieces = 0
+                area = 0.0
+                memory_used = 0
+                compose_time = 0.0
+
+                if libtype == "goc":
+                    goc_composed_function = goc_functions_for_chain[0]
+                    start_time = time.time()
+                    if not name.endswith("tree"):
+                        # Sequential composition
+                        for i in range(1, chain_length):
+                            goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
+                    else:
+                        # Tree chain composition
+                        goc_composed_function = perform_tree_chain_composition(
+                            goc_functions_for_chain[:chain_length],
+                            compose_method_name=compose_method
+                        )
+                    compose_time = time.time() - start_time
+                    num_pieces = goc_composed_function.piece_count()
+                    area = goc_composed_function.compute_area()
+                    memory_used = get_size_in_bytes(goc_composed_function)
+
+                elif libtype == "nyr":
+                    nyr_composed_function = nyr_functions_for_chain[0]
+                    start_time = time.time()
+                    if not name.endswith("tree"):
+                        # Sequential composition
+                        for i in range(1, chain_length):
+                            nyr_composed_function = getattr(nyr_composed_function, compose_method)(nyr_functions_for_chain[i])
+                    else:
+                        # Tree chain composition
+                        nyr_composed_function = perform_tree_chain_composition(
+                            nyr_functions_for_chain[:chain_length],
+                            compose_method_name=compose_method     
+                        )
+                    compose_time = time.time() - start_time
+                    num_pieces = nyr_composed_function.nb_pieces()
+                    area = nyr_composed_function.compute_area()
+                    memory_used = get_size_in_bytes(nyr_composed_function)
+                    # if name == "visser2020+tree" and chain_length == 1000:
+                    #     print(nyr_composed_function)
+
+                else:
+                    raise ValueError(f"Unknown library type: {libtype}")
+
+                # Gather stats
+                stats = {
+                    "Start nb pieces": start_nb_pieces,
+                    "Chain Length": chain_length,
+                    "Function": name,
+                    "Num Pieces": num_pieces,
+                    "Area": area,
+                    "Memory Used (Bytes)": memory_used,
+                    "Compose Time (s)": compose_time
+                }
+
+                df_current_stats = pd.DataFrame(stats, index=[0])
+                print(df_current_stats.to_markdown(index=False))
+                df: pd.DataFrame = pd.concat(
+                    [df, df_current_stats],
+                    ignore_index=True
+                )
+    
+    # 3. Print the full results
+    print(f"\nFull benchmark results: [build type: {PWLF_BUILD_TYPE}]\n")
+    print(df.to_markdown(index=False))
+
+    # 5. Print total time and memory usage for each implementation
+    if df.empty:
+        print("No benchmark data collected. Exiting.")
+        return
+    best_memory_usage = float('inf')
+    best_memory_name = ""
+    best_time_usage = float('inf')
+    best_time_name = ""
+    
+    for _, name, _ in FUNCTION_VERSIONS:
+        total_time = df[df["Function"] == name]["Compose Time (s)"].sum()
+        total_memory = df[df["Function"] == name]["Memory Used (Bytes)"].sum()
+        print(f"Total Time {name}: {total_time} s")
+        print(f"Total Memory {name}: {total_memory} Bytes")
+        if total_memory == best_memory_usage:
+            best_memory_name += f" & {name}"
+        if total_memory < best_memory_usage:
+            best_memory_usage = total_memory
+            best_memory_name = name
+        if total_time < best_time_usage:
+            best_time_usage = total_time
+            best_time_name = name
+    
+    print(f"\nBest memory usage: {best_memory_name} ({best_memory_usage} Bytes)")
+    print(f"Best time usage: {best_time_name} ({best_time_usage} s)")
+
+
+benchmark_given_ndcpwlf_composition(
+    composition_chain_lengths=[2, 10, 100, 1000],
+    pwlf_nb_breakpoints=[1000],
+)
