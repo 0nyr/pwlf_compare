@@ -1436,6 +1436,10 @@ bool nyr::NDCPWLF::check_invariant() const {
     // Check xs and ys are non-decreasing
     for (size_t i = 1; i < xs.size(); ++i) {
         if (goc::epsilon_smaller(xs[i], xs[i-1]) || goc::epsilon_smaller(ys[i], ys[i-1])) {
+            std::cerr << "Invariant check failed: point ordering is violated at index " << i
+                      << " with xs[" << i-1 << "] = " << xs[i-1] << ", xs[" << i << "] = " << xs[i]
+                      << ", ys[" << i-1 << "] = " << ys[i-1] << ", ys[" << i << "] = " << ys[i] << std::endl;
+            Print(std::cerr);
             return false; // xs or ys are not non-decreasing
         }
     }
@@ -1817,10 +1821,42 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
         intercept_g_piece = compute_raw_intercept(g.xs[0], g.ys[0], slope_g_piece);
     }
 
-    for (size_t k = 0; k < nb_sum_points; k++) {
+    while (i < f.xs.size() && j < g.ys.size()) {
         double g_y = g.ys[j];
         double f_x = f.xs[i];
-        if (goc::epsilon_equal(g_y, f_x)) {
+        if (goc::epsilon_bigger(g_y, f_x)) {
+            // BACKWARD STEP: From f to g
+            double y_prime = f.ys[i];
+            if (interval_vector_includes(g.ys, f_x)) {
+                double x_prime = (f_x - intercept_g_piece) / slope_g_piece;
+                // Add the point (x', y') to fog
+                fog_xs.push_back(x_prime);
+                fog_ys.push_back(y_prime);
+
+                #ifndef NDEBUG
+                std::clog << "NDCPWLF::compose_visser: Backward step from f to g."
+                    << " i = "  << i
+                    << ", j = " << j
+                    << ", g_y = " << g_y
+                    << ", f_x = " << f_x
+                    << ", f_y = y_prime = " << y_prime
+                    << ", piece of g at j = " << j 
+                    << " of domain: [" << g.xs[j - 1] << ", " << g.xs[j] << "]"
+                    << " and image: [" << g.ys[j - 1] << ", " << g.ys[j] << "]"
+                    << ", slope_g_piece = " << slope_g_piece
+                    << ", intercept_g_piece = " << intercept_g_piece
+                    << ", obtained x_prime = " << x_prime
+                    << ". Adding point (" << x_prime << ", " << y_prime << ")"
+                    << std::endl;
+                #endif
+            }
+            // i has changed, so we need to recompute the slope and intercept
+            if (i < f.xs.size() - 1) {
+                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+            }
+            i += 1; // Move to next point of f
+        } else if (goc::epsilon_equal(g_y, f_x)) {
             // Matching breakpoint from g to f. 
             double x_prime = g.xs[j];
             double y_prime = f.ys[i];
@@ -1828,12 +1864,25 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
             fog_xs.push_back(x_prime);
             fog_ys.push_back(y_prime);
 
+            if (i < f.xs.size() - 1) {
+                // Recompute the slope and intercept for the next piece of f
+                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+            }
+            i += 1; // Move to next point of f
+            if (j < g.ys.size() - 1) {
+                // Recompute the slope and intercept for the next piece of g
+                slope_g_piece = compute_raw_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
+                intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
+            }
+            j += 1; // Move to next point of g
+
             #ifndef NDEBUG
             std::clog << "NDCPWLF::compose_visser: Matching breakpoint found."
                 << " Adding point (" << x_prime << ", " << y_prime << ")" 
                 << std::endl;
             #endif
-        } else if (goc::epsilon_smaller(g_y, f_x)) {
+        } else {
             // FORWARD STEP: From g to f
             if (interval_vector_includes(f.xs, g_y)) {
                 double x_prime = g.xs[j];
@@ -1863,39 +1912,12 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
                 intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
             }
             j += 1; // Move to next point of g
-        } else {
-            // BACKWARD STEP: From f to g
-            double y_prime = f.ys[i];
-            if (interval_vector_includes(g.ys, f_x)) {
-                double x_prime = (f_x - intercept_g_piece) / slope_g_piece;
-                // Add the point (x', y') to fog
-                fog_xs.push_back(x_prime);
-                fog_ys.push_back(y_prime);
-
-                #ifndef NDEBUG
-                std::clog << "NDCPWLF::compose_visser: Backward step from f to g."
-                    << " i = "  << i
-                    << ", j = " << j
-                    << ", g_y = " << g_y
-                    << ", f_x = " << f_x
-                    << ", piece of g at j = " << j << " (g.ys[j] = " << g.ys[j] <<")"
-                    << ", slope_g_piece = " << slope_g_piece
-                    << ", intercept_g_piece = " << intercept_g_piece
-                    << ". Adding point (" << x_prime << ", " << y_prime << ")"
-                    << std::endl;
-                #endif
-            }
-            // i has changed, so we need to recompute the slope and intercept
-            if (i < f.xs.size() - 1) {
-                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
-                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
-            }
-            i += 1; // Move to next point of f
-        }
+        } 
     }
     
     fog_xs.shrink_to_fit();
     fog_ys.shrink_to_fit();
+
     return nyr::NDCPWLF(fog_xs, fog_ys);
 }
 

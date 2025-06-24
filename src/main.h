@@ -1003,12 +1003,19 @@ inline double compute_raw_slope(
 	const double x1, const double y1,
 	const double x2, const double y2
 ) {
-	return (y2 - y1) / (x2 - x1);
+	double slope = (y2 - y1) / (x2 - x1);
+	if (slope < goc::EPS_SLOPE_ZERO) {
+		slope = 0.0; // Handle horizontal segments
+	}
+	return slope;
 }
 inline double compute_raw_intercept(
  const double x1, const double y1,
  const double slope
 ) {
+	if (slope < goc::EPS_SLOPE_ZERO) {
+		return y1; // Handle horizontal segments
+	}
  	return y1 - slope * x1;
 }
 

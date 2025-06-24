@@ -699,20 +699,20 @@ def benchmark_pwl_function_implementation(
         print("Both implementations use the same amount of memory.")
 
 
-# benchmark_pwl_function_implementation(
-#     composition_chain_lengths=[2, 5, 10, 100, 500],
-#     pwlf_nb_breakpoints=[6, 12, 100, 1000],
-#     check_functions=False,
-#     non_decreasing=True,
-#     use_tree_chain_composition=False,
-#     plot_composed_functions=False
-# )
-
 benchmark_pwl_function_implementation(
-    composition_chain_lengths=[2],
-    pwlf_nb_breakpoints=[100],
+    composition_chain_lengths=[2, 5, 10, 100, 500],
+    pwlf_nb_breakpoints=[6, 12, 100, 1000],
     check_functions=False,
     non_decreasing=True,
     use_tree_chain_composition=False,
     plot_composed_functions=False
 )
+
+# benchmark_pwl_function_implementation(
+#     composition_chain_lengths=[2],
+#     pwlf_nb_breakpoints=[6],
+#     check_functions=True,
+#     non_decreasing=True,
+#     use_tree_chain_composition=False,
+#     plot_composed_functions=True
+# )
