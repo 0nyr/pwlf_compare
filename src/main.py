@@ -1,12 +1,25 @@
 import sys
 import os
 import random
+import argparse
+
+p = argparse.ArgumentParser(description="Configure & build the C++ solver")
+p.add_argument(
+    "--mode","-m",
+    choices=("debug","release"),
+    default="release",
+    help="Which configuration to run for pwlf_cpp lib."
+)
+args = p.parse_args()
 
 from utils.utils import get_a_parent_dir
 
 PROJECT_ROOT = get_a_parent_dir(os.path.dirname(__file__), 1)
 
-PWLF_BUILD_TYPE = "release" # "debug" or "release"
+PWLF_BUILD_TYPE =  args.mode.lower()
+if PWLF_BUILD_TYPE not in ("debug", "release"):
+    raise ValueError(f"Invalid build type: {PWLF_BUILD_TYPE}. Must be 'debug' or 'release'.")
+
 PWLF_DIR = os.path.join(
     PROJECT_ROOT,
     f"build/{PWLF_BUILD_TYPE}"
@@ -467,8 +480,8 @@ def benchmark_pwl_function_implementation(
         pwlf_nb_breakpoints: list[int],
         check_functions: bool = False,
         non_decreasing: bool = False,
-        num_breakpoints: int = 6,
-        use_tree_chain_composition: bool = False
+        use_tree_chain_composition: bool = False,
+        plot_composed_functions: bool = False
     ):
     """
     Benchmark the PWL function implementation by creating a chain
@@ -583,7 +596,7 @@ def benchmark_pwl_function_implementation(
             if not use_tree_chain_composition:
                 # Sequential composition
                 for i in range(1, chain_length):
-                    nyr_composed_function = nyr_composed_function.compose(nyr_functions_for_chain)
+                    nyr_composed_function = nyr_composed_function.compose_visser(nyr_functions_for_chain[i])
             else:
                 # Tree chain composition
                 nyr_composed_function = perform_tree_chain_composition(nyr_functions_for_chain[:chain_length])
@@ -609,14 +622,15 @@ def benchmark_pwl_function_implementation(
 
             # if num_breakpoints == 6 and chain_length == 5:
             # if num_breakpoints == 1001 and chain_length == 10:
-                # plot_goc_pwl_function(
-                #     pwl_function=goc_composed_function,
-                #     plot_subname="goc_composed"
-                # )
-                # plot_nyr_cpwlf_function(
-                #     cpwlf_function=nyr_composed_function,
-                #     plot_subname="nyr_composed"
-                # )
+            if plot_composed_functions:
+                plot_goc_pwl_function(
+                    pwl_function=goc_composed_function,
+                    plot_subname="goc_composed"
+                )
+                plot_nyr_cpwlf_function(
+                    cpwlf_function=nyr_composed_function,
+                    plot_subname="nyr_composed"
+                )
 
             #print(goc_composed_function.copy_breakpoints_and_values())
 
@@ -654,7 +668,7 @@ def benchmark_pwl_function_implementation(
             )
 
     # 3. Print the full results
-    print(f"\nFull benchmark results: [build type: {PWLF_BUILD_TYPE}]")
+    print(f"\nFull benchmark results: [build type: {PWLF_BUILD_TYPE}]\n")
     print(df.to_markdown(index=False))
 
     # 5. Print total time and memory usage for each implementation
@@ -685,10 +699,20 @@ def benchmark_pwl_function_implementation(
         print("Both implementations use the same amount of memory.")
 
 
+# benchmark_pwl_function_implementation(
+#     composition_chain_lengths=[2, 5, 10, 100, 500],
+#     pwlf_nb_breakpoints=[6, 12, 100, 1000],
+#     check_functions=False,
+#     non_decreasing=True,
+#     use_tree_chain_composition=False,
+#     plot_composed_functions=False
+# )
+
 benchmark_pwl_function_implementation(
-    composition_chain_lengths=[2, 5, 10, 100, 500],
-    pwlf_nb_breakpoints=[6, 12, 100, 1000],
+    composition_chain_lengths=[2],
+    pwlf_nb_breakpoints=[100],
     check_functions=False,
     non_decreasing=True,
-    use_tree_chain_composition=True
+    use_tree_chain_composition=False,
+    plot_composed_functions=False
 )

@@ -885,6 +885,13 @@ public:
 	// Note that the composition of 2 NDCPWLFs is necessarily another NDCPWLF (theorem 3, Visser et al. 2020)
     NDCPWLF compose(const NDCPWLF& g) const;
 
+	// Composition with Visser's method, no normalization.
+	NDCPWLF compose_visser(const NDCPWLF& g) const;
+
+	// Composition with Visser's method
+	// Improved with normalization.
+	NDCPWLF compose_opt(const NDCPWLF& g) const;
+
     goc::PWLFunction to_goc_pwl_function() const;
 
     void Print(std::ostream& os) const;
@@ -991,6 +998,19 @@ inline bool interval_vector_disjoints(
 // Tests for the interval_vector functions.
 void test_interval_vector_intersects();
 void test_interval_vector_includes();
+
+inline double compute_raw_slope(
+	const double x1, const double y1,
+	const double x2, const double y2
+) {
+	return (y2 - y1) / (x2 - x1);
+}
+inline double compute_raw_intercept(
+ const double x1, const double y1,
+ const double slope
+) {
+ 	return y1 - slope * x1;
+}
 
 } // namespace nyr
 // #################### NAMESPACE END ####################
