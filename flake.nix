@@ -31,6 +31,7 @@
             pythonPackages.tqdm
             pythonPackages.pandas
             pythonPackages.tabulate
+            pythonPackages.jinja2
             pythonPackages.seaborn
             pythonPackages.matplotlib
             

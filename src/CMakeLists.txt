@@ -17,6 +17,7 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # common flags
 set(COMMON_FLAGS "-pthread -m64")
+set(ARCH_OPTI_FLAGS "-march=native -mtune=native")
 string(APPEND CMAKE_CXX_FLAGS        " ${COMMON_FLAGS}")
 string(APPEND CMAKE_SHARED_LINKER_FLAGS " ${COMMON_FLAGS}")
 
@@ -26,7 +27,7 @@ set(UBSAN_FLAGS "-fsanitize=float-divide-by-zero,float-cast-overflow")
 # set flags based on build type
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
   message(STATUS "-- Compiling in Release Mode")
-  string(APPEND CMAKE_CXX_FLAGS " -O3 -DNDEBUG -march=native -mtune=native")
+  string(APPEND CMAKE_CXX_FLAGS " -O3 -DNDEBUG")
 elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
   message(STATUS "-- Compiling in Debug Mode (UBSan & logging)")
   string(APPEND CMAKE_CXX_FLAGS        " -g -Og -Wall -Wextra ${UBSAN_FLAGS}")

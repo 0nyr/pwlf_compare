@@ -1967,9 +1967,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
             double y_prime = f.ys[i];
             if (interval_vector_includes(g.ys, f_x)) {
                 double x_prime = (f_x - intercept_g_piece) / slope_g_piece;
-                // Add the point (x', y') to fog
-                fog_xs.push_back(x_prime);
-                fog_ys.push_back(y_prime);
+                normalized_add(fog_xs, fog_ys, x_prime, y_prime);
 
                 #ifndef NDEBUG
                 std::clog << "NDCPWLF::compose_visser: Backward step from f to g."
@@ -1998,9 +1996,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
             // Matching breakpoint from g to f. 
             double x_prime = g.xs[j];
             double y_prime = f.ys[i];
-            // Add the point (x', y') to fog
-            fog_xs.push_back(x_prime);
-            fog_ys.push_back(y_prime);
+            normalized_add(fog_xs, fog_ys, x_prime, y_prime);
 
             if (i < f.xs.size() - 1) {
                 // Recompute the slope and intercept for the next piece of f
@@ -2028,8 +2024,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
                 // This is the last piece i
                 double y_prime = slope_f_piece * g_y + intercept_f_piece;
                 // Add the point (x', y') to fog
-                fog_xs.push_back(x_prime);
-                fog_ys.push_back(y_prime);
+                normalized_add(fog_xs, fog_ys, x_prime, y_prime);
 
                 #ifndef NDEBUG
                 std::clog << "NDCPWLF::compose_visser: Forward step from g to f."
@@ -2052,60 +2047,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
             j += 1; // Move to next point of g
         } 
     }
-    
-    if (fog_xs.size() <= 2) {
-        return nyr::NDCPWLF(fog_xs, fog_ys);
-    }
-    std::vector<double> fog_xs_normalized;
-    std::vector<double> fog_ys_normalized;
-    fog_xs_normalized.reserve(fog_xs.size());
-    fog_ys_normalized.reserve(fog_ys.size());
-    
-    fog_xs_normalized.push_back(fog_xs[0]);
-    fog_ys_normalized.push_back(fog_ys[0]);
 
-    // std::clog << "NDCPWLF::compose: Nb points in fog before normalization: "
-    //        << fog_xs.size() << std::endl;
-
-    // 4. Normalizatiion: Remove redundant intermediate points
-    // Check that no piece is the continuation of the previous piece.
-    for (size_t i = 1; i < fog_xs.size() - 1; ++i) {
-        double x_prev = fog_xs_normalized.back();
-        double y_prev = fog_ys_normalized.back();
-        double x_curr = fog_xs[i];
-        double y_curr = fog_ys[i];
-        double x_next = fog_xs[i+1];
-        double y_next = fog_ys[i+1];
-
-        // Denominators can definitly be zero
-        double slope1 = compute_slope(x_prev, y_prev, x_curr, y_curr);
-        double slope2 = compute_slope(x_curr, y_curr, x_next, y_next);
-
-        // Only add the current point if the slopes are different
-        if (goc::epsilon_different(slope1, slope2)) {
-            fog_xs_normalized.push_back(x_curr);
-            if (slope1 != 0.0) {
-                fog_ys_normalized.push_back(y_curr);
-            } else {
-                fog_ys_normalized.push_back(y_prev); // If horizontal, keep the previous y value
-            }
-        } else {
-            #ifndef NDEBUG
-            std::clog << "NDCPWLF::compose: Removing intermediate point at index " << i
-            << " with coordinates (" << x_curr << ", " << y_curr << ")"
-            << std::endl;
-            #endif
-        }
-    }
-    fog_xs_normalized.push_back(fog_xs.back());
-    fog_ys_normalized.push_back(fog_ys.back());
-    fog_xs_normalized.shrink_to_fit();
-    fog_ys_normalized.shrink_to_fit();
-
-    // std::clog << "NDCPWLF::compose: Nb points in fog after normalization: "
-    //  << fog_xs_normalized.size() << std::endl;
-
-    return nyr::NDCPWLF(fog_xs_normalized, fog_ys_normalized);
+    return nyr::NDCPWLF(fog_xs, fog_ys);
 }
 
 goc::PWLFunction nyr::NDCPWLF::to_goc_pwl_function() const {

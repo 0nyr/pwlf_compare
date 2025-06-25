@@ -32,9 +32,9 @@ namespace goc
 // The purpose of this function is to standardize the way we fail in the program.
 inline void fail(const std::string& message, int exit_code = 1)
 {
-	std::cerr << "ERROR: " << message << std::endl;
-	throw std::runtime_error(message);
-	exit(exit_code);
+    std::cerr << "ERROR: " << message << std::endl;
+    throw std::runtime_error(message);
+    exit(exit_code);
 }
 
 // ########## SEPARATOR ##########
@@ -46,14 +46,14 @@ inline void fail(const std::string& message, int exit_code = 1)
 template<typename Collection>
 std::ostream& print_iterable(std::ostream& os, const Collection& collection, char prefix='{', char suffix='}')
 {
-	os << prefix;
-	for (auto it = collection.begin(); it != collection.end(); ++it)
-	{
-		if (it != collection.begin()) os << ", ";
-		os << *it;
-	}
-	os << suffix;
-	return os;
+    os << prefix;
+    for (auto it = collection.begin(); it != collection.end(); ++it)
+    {
+        if (it != collection.begin()) os << ", ";
+        os << *it;
+    }
+    os << suffix;
+    return os;
 }
 
 template<typename T>
@@ -143,7 +143,7 @@ void print_padded_vectors(
 template<typename T1, typename T2>
 std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& p)
 {
-	return os << "(" << p.first << ", " << p.second << ")";
+    return os << "(" << p.first << ", " << p.second << ")";
 }
 
 // Prints the set in the ostream os.
@@ -153,7 +153,7 @@ std::ostream& operator<<(std::ostream& os, const std::pair<T1, T2>& p)
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const std::set<T>& s)
 {
-	return print_iterable(os, s);
+    return print_iterable(os, s);
 }
 
 // Prints the set in the ostream os.
@@ -163,7 +163,7 @@ std::ostream& operator<<(std::ostream& os, const std::set<T>& s)
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& s)
 {
-	return print_iterable(os, s);
+    return print_iterable(os, s);
 }
 
 // Prints the map in the ostream os.
@@ -173,7 +173,7 @@ std::ostream& operator<<(std::ostream& os, const std::unordered_set<T>& s)
 template<typename K, typename V>
 std::ostream& operator<<(std::ostream& os, const std::map<K, V>& m)
 {
-	return print_iterable(os, m);
+    return print_iterable(os, m);
 }
 
 // Prints the map in the ostream os.
@@ -183,7 +183,7 @@ std::ostream& operator<<(std::ostream& os, const std::map<K, V>& m)
 template<typename K, typename V>
 std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& m)
 {
-	return print_iterable(os, m);
+    return print_iterable(os, m);
 }
 
 // Prints the vector in the ostream os.
@@ -193,14 +193,14 @@ std::ostream& operator<<(std::ostream& os, const std::unordered_map<K, V>& m)
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
 {
-	os << '[';
-	for (auto it = v.begin(); it != v.end(); ++it)
-	{
-		if (it != v.begin()) os << ", ";
-		os << *it;
-	}
-	os << ']';
-	return os;
+    os << '[';
+    for (auto it = v.begin(); it != v.end(); ++it)
+    {
+        if (it != v.begin()) os << ", ";
+        os << *it;
+    }
+    os << ']';
+    return os;
 }
 
 // Prints the deque in the ostream os.
@@ -210,7 +210,7 @@ std::ostream& operator<<(std::ostream& os, const std::vector<T>& v)
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const std::deque<T>& d)
 {
-	return print_iterable(os, d, '[', ']');
+    return print_iterable(os, d, '[', ']');
 }
 
 // Prints the list in the ostream os.
@@ -220,7 +220,7 @@ std::ostream& operator<<(std::ostream& os, const std::deque<T>& d)
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const std::list<T>& l)
 {
-	return print_iterable(os, l, '[', ']');
+    return print_iterable(os, l, '[', ']');
 }
 
 // Prints the bitset in the ostream os.
@@ -229,18 +229,18 @@ std::ostream& operator<<(std::ostream& os, const std::list<T>& l)
 template<unsigned long N>
 std::ostream& operator<<(std::ostream& os, const std::bitset<N>& b)
 {
-	os << "(";
-	bool first_added = true;
-	for (unsigned long i = 0; i < N; ++i)
-	{
-		if (b.test(i))
-		{
-			if (!first_added) os << ", ";
-			first_added = false;
-			os << i;
-		}
-	}
-	return os << ")";
+    os << "(";
+    bool first_added = true;
+    for (unsigned long i = 0; i < N; ++i)
+    {
+        if (b.test(i))
+        {
+            if (!first_added) os << ", ";
+            first_added = false;
+            os << i;
+        }
+    }
+    return os << ")";
 }
 
 // ########## SEPARATOR ##########
@@ -268,7 +268,7 @@ std::string trim(const std::string& s);
 class Printable
 {
 public:
-	virtual void Print(std::ostream& os) const = 0;
+    virtual void Print(std::ostream& os) const = 0;
 };
 
 std::ostream& operator<<(std::ostream& os, const Printable& object);
@@ -285,46 +285,46 @@ const double INFTY = 10e50;
 // Returns: if x = y with respect to the tolerance EPS.
 inline bool epsilon_equal(double x, double y)
 {
-	return fabs(x - y) < EPS;
+    return fabs(x - y) < EPS;
 };
 
 // Returns: if x != y with respect to the tolerance EPS.
 inline bool epsilon_different(double x, double y)
 {
-	return fabs(x - y) >= EPS;
+    return fabs(x - y) >= EPS;
 };
 
 // Returns: if x < y with respect to the tolerance EPS.
 inline bool epsilon_smaller(double x, double y)
 {
-	return x + EPS < y;
+    return x + EPS < y;
 }
 
 // Returns: if x <= y with respect to the tolerance EPS.
 inline bool epsilon_smaller_equal(double x, double y)
 {
-	return x - EPS < y;
+    return x - EPS < y;
 }
 
 // Returns: if x > y with respect to the tolerance EPS.
 inline bool epsilon_bigger(double x, double y)
 {
-	return x - EPS > y;
+    return x - EPS > y;
 }
 
 // Returns: if x >= y with respect to the tolerance EPS.
 inline bool epsilon_bigger_equal(double x, double y)
 {
-	return x + EPS > y;
+    return x + EPS > y;
 }
 
 // Returns: the sum of all numbers in 'numbers'.
 // Observation: the sum of an empty collection is 0.
 inline double sum(const std::vector<double>& numbers)
 {
-	double a = 0.0;
-	for (double n: numbers) a += n;
-	return a;
+    double a = 0.0;
+    for (double n: numbers) a += n;
+    return a;
 }
 
 // Returns: the sum of the value(e) for e \in v.
@@ -332,9 +332,9 @@ inline double sum(const std::vector<double>& numbers)
 template<typename T>
 double sum(const std::vector<T>& v, const std::function<double(const T& e)>& value)
 {
-	double a = 0.0;
-	for (auto& e: v) a += value(e);
-	return a;
+    double a = 0.0;
+    for (auto& e: v) a += value(e);
+    return a;
 }
 
 // ########## SEPARATOR ##########
@@ -343,51 +343,51 @@ double sum(const std::vector<T>& v, const std::function<double(const T& e)>& val
 class Interval : public Printable
 {
 public:
-	// Limits of the interval.
-	double left, right;
-	
-	// Represents the empty interval [INFTY, -INFTY].
-	Interval();
-	
-	// Represents the interval [left, right].
-	Interval(double left, double right);
-	
-	// Returns: if left > right.
-	bool Empty() const;
-	
-	// Returns: if value \in [left, right] using epsilon-comparison.
-	bool Includes(double value) const;
-	
-	// Returns: if r=[a,b]\subseteq [left, right] using epsilon-comparison.
-	bool IsIncludedIn(const Interval& r) const;
-	
-	// Returns: if r=[a,b] \cap [left, right] using epsilon-comparison.
-	bool Intersects(const Interval& r) const;
-	
-	// Returns: this \cap r.
-	Interval Intersection(const Interval& r) const;
-	
-	// Returns: if the domain is [a, a] for some a.
-	bool IsPoint() const;
+    // Limits of the interval.
+    double left, right;
+    
+    // Represents the empty interval [INFTY, -INFTY].
+    Interval();
+    
+    // Represents the interval [left, right].
+    Interval(double left, double right);
+    
+    // Returns: if left > right.
+    bool Empty() const;
+    
+    // Returns: if value \in [left, right] using epsilon-comparison.
+    bool Includes(double value) const;
+    
+    // Returns: if r=[a,b]\subseteq [left, right] using epsilon-comparison.
+    bool IsIncludedIn(const Interval& r) const;
+    
+    // Returns: if r=[a,b] \cap [left, right] using epsilon-comparison.
+    bool Intersects(const Interval& r) const;
+    
+    // Returns: this \cap r.
+    Interval Intersection(const Interval& r) const;
+    
+    // Returns: if the domain is [a, a] for some a.
+    bool IsPoint() const;
 
-	// Returns: the union of the intervals.
-	Interval Union(const Interval& r) const;
-	
-	// Prints the interval.
-	// Format: [left, right].
-	virtual void Print(std::ostream& os) const;
-	
-	// Returns: if two intervals are the same.
-	// We say two intervals are the same if their limits are the same or if they are empty intervals (left > right).
-	bool operator==(const Interval& i) const;
-	
-	// Returns: if two intervals are different.
-	bool operator!=(const Interval& i) const;
+    // Returns: the union of the intervals.
+    Interval Union(const Interval& r) const;
+    
+    // Prints the interval.
+    // Format: [left, right].
+    virtual void Print(std::ostream& os) const;
+    
+    // Returns: if two intervals are the same.
+    // We say two intervals are the same if their limits are the same or if they are empty intervals (left > right).
+    bool operator==(const Interval& i) const;
+    
+    // Returns: if two intervals are different.
+    bool operator!=(const Interval& i) const;
 
-	// Returns the total memory footprint of *this* object, in bytes,
-	// including both the fixed‐size portion (sizeof(*this)) and any
-	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;	
+    // Returns the total memory footprint of *this* object, in bytes,
+    // including both the fixed‐size portion (sizeof(*this)) and any
+    // heap allocations (e.g. std::vector buffers).
+    std::size_t memory_footprint_bytes() const;    
 };
 
 // JSON format: [left, right].
@@ -401,16 +401,16 @@ void to_json(nlohmann::json& j, const Interval& i);
 class Point2D : public Printable
 {
 public:
-	double x, y;
-	
-	Point2D(double x=0.0, double y=0.0);
-	
-	virtual void Print(std::ostream& os) const;
+    double x, y;
+    
+    Point2D(double x=0.0, double y=0.0);
+    
+    virtual void Print(std::ostream& os) const;
 
-	// Returns the total memory footprint of *this* object, in bytes,
-	// including both the fixed‐size portion (sizeof(*this)) and any
-	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;	
+    // Returns the total memory footprint of *this* object, in bytes,
+    // including both the fixed‐size portion (sizeof(*this)) and any
+    // heap allocations (e.g. std::vector buffers).
+    std::size_t memory_footprint_bytes() const;    
 };
 
 // JSON format: [x, y].
@@ -427,60 +427,60 @@ void to_json(nlohmann::json& j, const Point2D& p);
 class LinearFunction : public Printable
 {
 public:
-	Interval domain, image;
-	double slope, intercept;
-	
-	LinearFunction() = default;
-	
-	// Creates a linear function from p1 to p2.
-	// Precondition: p1.x <= p2.x.
-	LinearFunction(const Point2D& p1, const Point2D& p2);
-	
-	// Returns: the value of the function f(x).
-	// Precondition: x \in domain.
-	double Value(double x) const;
-	
-	// Returns: the value of the function f(x).
-	// Precondition: x \in domain.
-	double operator()(double x) const;
-	
-	// Returns: the last x such that f(x) = y.
-	// Observation: if slope == 0 the function is not inversible therefore many f(x) = y might exist.
-	// Precondition: y \in image.
-	double PreValue(double y) const;
-	
-	// Returns: if this function intersects the function f inside both functions domains.
-	bool Intersects(const LinearFunction& f) const;
-	
-	// Returns: the coordinate x such that this(x) == f(x).
-	// Precondition: Intersects(*this, f).
-	double Intersection(const LinearFunction& f) const;
-	
-	// Returns: the inverse function of this function (f) if exists, otherwise returns g(y) = max{x : f(x)=y }.
-	LinearFunction Inverse() const;
-	
-	// Restricts the domain.
-	// Returns: the restricted function.
-	LinearFunction RestrictDomain(const Interval& domain) const;
-	
-	// Restricts the image.
-	// Returns: the restricted function.
-	LinearFunction RestrictImage(const Interval& image) const;
-	
-	// Prints the function.
-	// Format: {(x1, y1)->(x2,y2)}.
-	void Print(std::ostream& os) const;
-	
-	// Returns: if two functions have the same p1 and p2.
-	bool operator==(const LinearFunction& f) const;
-	
-	// Returns: if two functions have different p1 and p2.
-	bool operator!=(const LinearFunction& f) const;
+    Interval domain, image;
+    double slope, intercept;
+    
+    LinearFunction() = default;
+    
+    // Creates a linear function from p1 to p2.
+    // Precondition: p1.x <= p2.x.
+    LinearFunction(const Point2D& p1, const Point2D& p2);
+    
+    // Returns: the value of the function f(x).
+    // Precondition: x \in domain.
+    double Value(double x) const;
+    
+    // Returns: the value of the function f(x).
+    // Precondition: x \in domain.
+    double operator()(double x) const;
+    
+    // Returns: the last x such that f(x) = y.
+    // Observation: if slope == 0 the function is not inversible therefore many f(x) = y might exist.
+    // Precondition: y \in image.
+    double PreValue(double y) const;
+    
+    // Returns: if this function intersects the function f inside both functions domains.
+    bool Intersects(const LinearFunction& f) const;
+    
+    // Returns: the coordinate x such that this(x) == f(x).
+    // Precondition: Intersects(*this, f).
+    double Intersection(const LinearFunction& f) const;
+    
+    // Returns: the inverse function of this function (f) if exists, otherwise returns g(y) = max{x : f(x)=y }.
+    LinearFunction Inverse() const;
+    
+    // Restricts the domain.
+    // Returns: the restricted function.
+    LinearFunction RestrictDomain(const Interval& domain) const;
+    
+    // Restricts the image.
+    // Returns: the restricted function.
+    LinearFunction RestrictImage(const Interval& image) const;
+    
+    // Prints the function.
+    // Format: {(x1, y1)->(x2,y2)}.
+    void Print(std::ostream& os) const;
+    
+    // Returns: if two functions have the same p1 and p2.
+    bool operator==(const LinearFunction& f) const;
+    
+    // Returns: if two functions have different p1 and p2.
+    bool operator!=(const LinearFunction& f) const;
 
-	// Returns the total memory footprint of *this* object, in bytes,
-	// including both the fixed‐size portion (sizeof(*this)) and any
-	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;	
+    // Returns the total memory footprint of *this* object, in bytes,
+    // including both the fixed‐size portion (sizeof(*this)) and any
+    // heap allocations (e.g. std::vector buffers).
+    std::size_t memory_footprint_bytes() const;    
 };
 
 // JSON format: [p1, p2].
@@ -513,140 +513,140 @@ LinearFunction operator*(const LinearFunction& f, double a);
 // This class represents a piecewise linear function. It has a sequence of linear functions with bounded domains.
 // Invariant: the linear functions are non overlapping and are increasing in domain.
 // Invariant: the function is stored normalized. A function is normalized iif no two consecutive pieces have the same
-// 			  slope, intercept, and share the end and beginning of their domains.
+//               slope, intercept, and share the end and beginning of their domains.
 // Example: [segment1={(1,2),(2,3)},segment2={(2,3),(3,4)}] is not normalized. [segment1={(1,2),(3,4)}] is normalized.
 class PWLFunction : public Printable
 {
 public:
-	// Returns: f(x)=a with the specific domain.
-	static PWLFunction ConstantFunction(double a, Interval domain);
-	
-	// Returns: f(x)=x with the specific domain.
-	static PWLFunction IdentityFunction(Interval domain);
-	
-	// Creates an empty piecewise linear function.
-	PWLFunction();
-	
-	// Creates a piecewise linear function with the specified pieces.
-	PWLFunction(const std::vector<LinearFunction>& pieces);
+    // Returns: f(x)=a with the specific domain.
+    static PWLFunction ConstantFunction(double a, Interval domain);
+    
+    // Returns: f(x)=x with the specific domain.
+    static PWLFunction IdentityFunction(Interval domain);
+    
+    // Creates an empty piecewise linear function.
+    PWLFunction();
+    
+    // Creates a piecewise linear function with the specified pieces.
+    PWLFunction(const std::vector<LinearFunction>& pieces);
 
-	// Constructor for 2D continuous piecewise linear function
+    // Constructor for 2D continuous piecewise linear function
     // Precondition: The list of breakpoints must be sorted and unique.
-	PWLFunction(
-		const std::vector<double>& breakpoints,
-		const std::vector<double>& values
-	);
-	
-	// Adds the piece at the end of the function.
-	// Keeps the normalization invariant automatically.
-	void AddPiece(const LinearFunction& piece);
-	
-	// Removes the last piece from the function.
-	// Precondition: PieceCount() > 0.
-	void PopPiece();
-	
-	// Returns: if the function has no pieces.
-	bool Empty() const;
-	
-	// Returns: the numer of pieces of the function.
-	int PieceCount() const;
-	
-	// Returns: a vector with the function pieces.
-	const std::vector<LinearFunction>& Pieces() const;
-	
-	// Returns: the i-th piece of the function.
-	// Precondition: i > PieceCount().
-	const LinearFunction& Piece(int i) const;
-	
-	// Returns: the i-th piece of the function.
-	// Precondition: i > PieceCount().
-	const LinearFunction& operator[](int i) const;
-	
-	// Returns: the first piece of the function.
-	// Precondition: !Empty().
-	const LinearFunction& FirstPiece() const;
-	
-	// Returns: the last piece of the function.
-	// Precondition: !Empty().
-	const LinearFunction& LastPiece() const;
-	
-	// Returns: the last piece index that includes x in its domain.
-	// Precondition: x \in dom(p) for any piece p.
-	int PieceIncluding(double x) const;
-	
-	// Returns: the smallest interval [m, M] that includes all pieces domains.
-	// Observation: if Empty() then returns [INFTY, -INFTY].
-	Interval Domain() const;
-	
-	// Returns: the smallest interval [m, M] that includes all pieces images.
-	// Observation: if Empty() then returns [INFTY, -INFTY].
-	Interval Image() const;
-	
-	// Returns: the evaluation of the piece that includes x in its domain.
-	// Exception: if no piece includes x in its domain, it throws an exception.
-	double Value(double x) const;
-	
-	// Returns: the evaluation of the piece that includes x in its domain.
-	// Exception: if no piece includes x in its domain, it throws an exception.
-	double operator()(double x) const;
-	
-	// Returns: the last x such that f(x) = y. Notice that if the function is not bijective it may contain multiple
-	// x such that f(x) = y.
-	// Exception: if no f(x) = y, then it throws an exception.
-	double PreValue(double y) const;
-	
-	// Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
-	// Observation: the domain of the new function are those x such that g(x) \in dom(f).
-	PWLFunction Compose(const PWLFunction& g) const;
-	
-	// Returns: the inverse of this function (f) if is inversible, otherwise returns g(y) = max{x : f(x) = y}.
-	PWLFunction Inverse() const;
-	
-	// Restricts the domain to only the pieces included in the parameter.
-	// Returns: the restricted function.
-	PWLFunction RestrictDomain(const Interval& domain) const;
-	
-	// Restricts the image to only the pieces included in the parameter.
-	// Returns: the restricted function.
-	PWLFunction RestrictImage(const Interval& image) const;
+    PWLFunction(
+        const std::vector<double>& breakpoints,
+        const std::vector<double>& values
+    );
+    
+    // Adds the piece at the end of the function.
+    // Keeps the normalization invariant automatically.
+    void AddPiece(const LinearFunction& piece);
+    
+    // Removes the last piece from the function.
+    // Precondition: PieceCount() > 0.
+    void PopPiece();
+    
+    // Returns: if the function has no pieces.
+    bool Empty() const;
+    
+    // Returns: the numer of pieces of the function.
+    int PieceCount() const;
+    
+    // Returns: a vector with the function pieces.
+    const std::vector<LinearFunction>& Pieces() const;
+    
+    // Returns: the i-th piece of the function.
+    // Precondition: i > PieceCount().
+    const LinearFunction& Piece(int i) const;
+    
+    // Returns: the i-th piece of the function.
+    // Precondition: i > PieceCount().
+    const LinearFunction& operator[](int i) const;
+    
+    // Returns: the first piece of the function.
+    // Precondition: !Empty().
+    const LinearFunction& FirstPiece() const;
+    
+    // Returns: the last piece of the function.
+    // Precondition: !Empty().
+    const LinearFunction& LastPiece() const;
+    
+    // Returns: the last piece index that includes x in its domain.
+    // Precondition: x \in dom(p) for any piece p.
+    int PieceIncluding(double x) const;
+    
+    // Returns: the smallest interval [m, M] that includes all pieces domains.
+    // Observation: if Empty() then returns [INFTY, -INFTY].
+    Interval Domain() const;
+    
+    // Returns: the smallest interval [m, M] that includes all pieces images.
+    // Observation: if Empty() then returns [INFTY, -INFTY].
+    Interval Image() const;
+    
+    // Returns: the evaluation of the piece that includes x in its domain.
+    // Exception: if no piece includes x in its domain, it throws an exception.
+    double Value(double x) const;
+    
+    // Returns: the evaluation of the piece that includes x in its domain.
+    // Exception: if no piece includes x in its domain, it throws an exception.
+    double operator()(double x) const;
+    
+    // Returns: the last x such that f(x) = y. Notice that if the function is not bijective it may contain multiple
+    // x such that f(x) = y.
+    // Exception: if no f(x) = y, then it throws an exception.
+    double PreValue(double y) const;
+    
+    // Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
+    // Observation: the domain of the new function are those x such that g(x) \in dom(f).
+    PWLFunction Compose(const PWLFunction& g) const;
+    
+    // Returns: the inverse of this function (f) if is inversible, otherwise returns g(y) = max{x : f(x) = y}.
+    PWLFunction Inverse() const;
+    
+    // Restricts the domain to only the pieces included in the parameter.
+    // Returns: the restricted function.
+    PWLFunction RestrictDomain(const Interval& domain) const;
+    
+    // Restricts the image to only the pieces included in the parameter.
+    // Returns: the restricted function.
+    PWLFunction RestrictImage(const Interval& image) const;
 
-	bool check_invariant() const;
-	bool check_normalization() const;
+    bool check_invariant() const;
+    bool check_normalization() const;
 
-	const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const;
+    const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const;
 
-	// Prints the function.
-	// Format: [p1, p2, ..., pn].
-	virtual void Print(std::ostream& os) const;
-	
-	// Returns: if all the pieces of both functions are the same.
-	bool operator==(const PWLFunction& f) const;
-	
-	// Returns: if any piece of both functions is different.
-	bool operator!=(const PWLFunction& f) const;
+    // Prints the function.
+    // Format: [p1, p2, ..., pn].
+    virtual void Print(std::ostream& os) const;
+    
+    // Returns: if all the pieces of both functions are the same.
+    bool operator==(const PWLFunction& f) const;
+    
+    // Returns: if any piece of both functions is different.
+    bool operator!=(const PWLFunction& f) const;
 
-	// Returns the total memory footprint of *this* object, in bytes,
-	// including both the fixed‐size portion (sizeof(*this)) and any
-	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;
+    // Returns the total memory footprint of *this* object, in bytes,
+    // including both the fixed‐size portion (sizeof(*this)) and any
+    // heap allocations (e.g. std::vector buffers).
+    std::size_t memory_footprint_bytes() const;
 
-	/**
-	 * @brief Computes the area under the non-decreasing continuous piecewise linear function.
-	 * * This function calculates the definite integral of the function from its
-	 * minimum domain value to its maximum domain value. It achieves this by
-	 * summing the areas of the trapezoids formed by each linear piece and the x-axis.
-	 * * For each segment from (x_i, y_i) to (x_{i+1}, y_{i+1}), the area of the
-	 * trapezoid is calculated as: (y_i + y_{i+1}) * (x_{i+1} - x_i) / 2.0.
-	 * * Vertical segments (where x_{i+1} - x_i == 0) correctly contribute 0 area.
-	 * * @return The total area under the function. Returns 0.0 if the function is empty.
-	 */
-	double compute_area() const;
+    /**
+     * @brief Computes the area under the non-decreasing continuous piecewise linear function.
+     * * This function calculates the definite integral of the function from its
+     * minimum domain value to its maximum domain value. It achieves this by
+     * summing the areas of the trapezoids formed by each linear piece and the x-axis.
+     * * For each segment from (x_i, y_i) to (x_{i+1}, y_{i+1}), the area of the
+     * trapezoid is calculated as: (y_i + y_{i+1}) * (x_{i+1} - x_i) / 2.0.
+     * * Vertical segments (where x_{i+1} - x_i == 0) correctly contribute 0 area.
+     * * @return The total area under the function. Returns 0.0 if the function is empty.
+     */
+    double compute_area() const;
 private:
-	// Updates the image_ attribute to keep it updated after a Pop() operation.
-	void UpdateImage();
-	
-	std::vector<LinearFunction> pieces_;
-	Interval domain_, image_;
+    // Updates the image_ attribute to keep it updated after a Pop() operation.
+    void UpdateImage();
+    
+    std::vector<LinearFunction> pieces_;
+    Interval domain_, image_;
 };
 
 // JSON format: [p1, p2, ..., pn].
@@ -750,10 +750,10 @@ private:
 
 public:
     // Returns: f(x)=a with the specific domain.
-	static CPWLF make_constant(double a, goc::Interval domain);
+    static CPWLF make_constant(double a, goc::Interval domain);
 
     // Returns: f(x)=x with the specific domain.
-	static CPWLF make_identity(goc::Interval domain);
+    static CPWLF make_identity(goc::Interval domain);
 
     // Constructor for 2D continuous piecewise linear function
     // Precondition: The list of breakpoints must be sorted and unique.
@@ -771,31 +771,31 @@ public:
     // Returns the number of pieces in the function.
     size_t nb_pieces() const;
 
-	// Returns: the smallest interval [m, M] that includes all pieces domains.
-	// Observation: if Empty() then returns [INFTY, -INFTY].
-	goc::Interval compute_domain() const;
-	
-	// Returns: the smallest interval [m, M] that includes all pieces images.
-	// Observation: if Empty() then returns [INFTY, -INFTY].
-	goc::Interval compute_image() const;
+    // Returns: the smallest interval [m, M] that includes all pieces domains.
+    // Observation: if Empty() then returns [INFTY, -INFTY].
+    goc::Interval compute_domain() const;
+    
+    // Returns: the smallest interval [m, M] that includes all pieces images.
+    // Observation: if Empty() then returns [INFTY, -INFTY].
+    goc::Interval compute_image() const;
 
     // O(log n) evaluation using binary search and linear interpolation
     // Throws std::out_of_range if x is outside the domain.
     // Precondition: x \in dom(f)
     double evaluate(double x) const;
-	
-	// Returns: the evaluation of the piece that includes x in its domain.
-	// Exception: if no piece includes x in its domain, it throws an exception.
-	double operator()(double x) const;
+    
+    // Returns: the evaluation of the piece that includes x in its domain.
+    // Exception: if no piece includes x in its domain, it throws an exception.
+    double operator()(double x) const;
 
     // Checks if the function is well-formed.
     bool check_invariant() const;
 
-	// Checks if the function is normalized.
-	bool check_normalization() const;
+    // Checks if the function is normalized.
+    bool check_normalization() const;
 
-	// Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
-	// Observation: the domain of the new function are those x such that g(x) \in dom(f).
+    // Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
+    // Observation: the domain of the new function are those x such that g(x) \in dom(f).
     CPWLF compose(const CPWLF& g) const;
 
     goc::PWLFunction to_goc_pwl_function() const;
@@ -806,18 +806,18 @@ public:
     const goc::Interval& get_domain() const { return domain_; }
     const goc::Interval& get_image() const { return image_; }
     const std::vector<double>& get_breakpoints() const { return breakpoints_; }
-    const std::vector<double>& get_values() const { return values_; }	
-	const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const {
-		return {breakpoints_, values_};
-	}
+    const std::vector<double>& get_values() const { return values_; }    
+    const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const {
+        return {breakpoints_, values_};
+    }
 
     // Returns: if the function equals another function.
     bool operator==(const CPWLF& other) const;
 
-	// Returns the total memory footprint of *this* object, in bytes,
-	// including both the fixed‐size portion (sizeof(*this)) and any
-	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;	
+    // Returns the total memory footprint of *this* object, in bytes,
+    // including both the fixed‐size portion (sizeof(*this)) and any
+    // heap allocations (e.g. std::vector buffers).
+    std::size_t memory_footprint_bytes() const;    
 };
 
 /**
@@ -837,20 +837,20 @@ public:
  */
 class NDCPWLF : public goc::Printable {
 public:
-	const std::vector<double> xs; // Sorted x-values
+    const std::vector<double> xs; // Sorted x-values
     const std::vector<double> ys; // Corresponding (sorted) y-values
     // NOTE: No need to store domain_ and image_ since they are obtained in O(1) from xs_ and ys_.
 
     // Returns: f(x)=x with the specific domain.
-	static NDCPWLF make_identity(goc::Interval domain);
+    static NDCPWLF make_identity(goc::Interval domain);
 
     // Constructor for 2D continuous piecewise linear function
     // Precondition: The list of breakpoints must be sorted and unique.
-	// Precondition: The values must be non-decreasing, but not necessarily unique (step function case).
-	NDCPWLF(
-		const std::vector<double> xs,
-		const std::vector<double> ys
-	);
+    // Precondition: The values must be non-decreasing, but not necessarily unique (step function case).
+    NDCPWLF(
+        const std::vector<double> xs,
+        const std::vector<double> ys
+    );
 
     // Return empty
     NDCPWLF() = default;
@@ -864,33 +864,33 @@ public:
     // O(log n) evaluation using binary search and linear interpolation
     // Throws std::out_of_range if x is outside the domain.
     // Precondition: x \in dom(f)
-	// Note that if x is the domain value of a step, it returns the smallest value of the step.
+    // Note that if x is the domain value of a step, it returns the smallest value of the step.
     double evaluate(double x) const;
-	
-	// Returns: the evaluation of the piece that includes x in its domain.
-	// Exception: if no piece includes x in its domain, it throws an exception.
-	// Note that if x is the domain value of a step, it returns the smallest value of the step.
-	double operator()(double x) const;
+    
+    // Returns: the evaluation of the piece that includes x in its domain.
+    // Exception: if no piece includes x in its domain, it throws an exception.
+    // Note that if x is the domain value of a step, it returns the smallest value of the step.
+    double operator()(double x) const;
 
     // Checks if the function is well-formed, i.e. that
-	// its xs and ys are non-decreasing.
-	// NOTE: There can be duplicate xs and ys.
+    // its xs and ys are non-decreasing.
+    // NOTE: There can be duplicate xs and ys.
     bool check_invariant() const;
 
-	// Checks if the function is normalized.
-	bool check_normalization() const;
+    // Checks if the function is normalized.
+    bool check_normalization() const;
 
-	// Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
-	// Observation: the domain of the new function are those x such that g(x) \in dom(f).
-	// Note that the composition of 2 NDCPWLFs is necessarily another NDCPWLF (theorem 3, Visser et al. 2020)
+    // Returns: the composition of this function (f) and g, i.e. fog(x) == f(g(x)).
+    // Observation: the domain of the new function are those x such that g(x) \in dom(f).
+    // Note that the composition of 2 NDCPWLFs is necessarily another NDCPWLF (theorem 3, Visser et al. 2020)
     NDCPWLF compose(const NDCPWLF& g) const;
 
-	// Composition with Visser's method, no normalization.
-	NDCPWLF compose_visser(const NDCPWLF& g) const;
+    // Composition with Visser's method, no normalization.
+    NDCPWLF compose_visser(const NDCPWLF& g) const;
 
-	// Composition with Visser's method
-	// Improved with post-normalization.
-	NDCPWLF compose_visser_normalization(const NDCPWLF& g) const;
+    // Composition with Visser's method
+    // Improved with post-normalization.
+    NDCPWLF compose_visser_normalization(const NDCPWLF& g) const;
 
     goc::PWLFunction to_goc_pwl_function() const;
 
@@ -898,48 +898,48 @@ public:
 
     // Getters
     inline double get_min_domain() const {
-		return xs.empty() ? goc::INFTY : xs.front();
-	}
+        return xs.empty() ? goc::INFTY : xs.front();
+    }
     inline double get_max_domain() const {
-		return xs.empty() ? -goc::INFTY : xs.back();
-	}
-	inline double get_min_image() const {
-		return ys.empty() ? goc::INFTY : ys.front();
-	}
-	inline double get_max_image() const {
-		return ys.empty() ? -goc::INFTY : ys.back();
-	}
-	inline goc::Interval get_domain() const {
-		return goc::Interval(get_min_domain(), get_max_domain());
-	}
-	inline goc::Interval get_image() const {
-		return goc::Interval(get_min_image(), get_max_image());
-	}
+        return xs.empty() ? -goc::INFTY : xs.back();
+    }
+    inline double get_min_image() const {
+        return ys.empty() ? goc::INFTY : ys.front();
+    }
+    inline double get_max_image() const {
+        return ys.empty() ? -goc::INFTY : ys.back();
+    }
+    inline goc::Interval get_domain() const {
+        return goc::Interval(get_min_domain(), get_max_domain());
+    }
+    inline goc::Interval get_image() const {
+        return goc::Interval(get_min_image(), get_max_image());
+    }
     const std::vector<double>& get_breakpoints() const { return xs; }
-    const std::vector<double>& get_values() const { return ys; }	
-	const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const {
-		return {xs, ys};
-	}
+    const std::vector<double>& get_values() const { return ys; }    
+    const std::pair<std::vector<double>, std::vector<double>> copy_breakpoints_and_values() const {
+        return {xs, ys};
+    }
 
     // Returns: if the function equals another function.
     bool operator==(const NDCPWLF& other) const;
 
-	// Returns the total memory footprint of *this* object, in bytes,
-	// including both the fixed‐size portion (sizeof(*this)) and any
-	// heap allocations (e.g. std::vector buffers).
-	std::size_t memory_footprint_bytes() const;
+    // Returns the total memory footprint of *this* object, in bytes,
+    // including both the fixed‐size portion (sizeof(*this)) and any
+    // heap allocations (e.g. std::vector buffers).
+    std::size_t memory_footprint_bytes() const;
 
-	/**
-	 * @brief Computes the area under the non-decreasing continuous piecewise linear function.
-	 * * This function calculates the definite integral of the function from its
-	 * minimum domain value to its maximum domain value. It achieves this by
-	 * summing the areas of the trapezoids formed by each linear piece and the x-axis.
-	 * * For each segment from (x_i, y_i) to (x_{i+1}, y_{i+1}), the area of the
-	 * trapezoid is calculated as: (y_i + y_{i+1}) * (x_{i+1} - x_i) / 2.0.
-	 * * Vertical segments (where x_{i+1} - x_i == 0) correctly contribute 0 area.
-	 * * @return The total area under the function. Returns 0.0 if the function is empty.
-	 */
-	double compute_area() const;
+    /**
+     * @brief Computes the area under the non-decreasing continuous piecewise linear function.
+     * * This function calculates the definite integral of the function from its
+     * minimum domain value to its maximum domain value. It achieves this by
+     * summing the areas of the trapezoids formed by each linear piece and the x-axis.
+     * * For each segment from (x_i, y_i) to (x_{i+1}, y_{i+1}), the area of the
+     * trapezoid is calculated as: (y_i + y_{i+1}) * (x_{i+1} - x_i) / 2.0.
+     * * Vertical segments (where x_{i+1} - x_i == 0) correctly contribute 0 area.
+     * * @return The total area under the function. Returns 0.0 if the function is empty.
+     */
+    double compute_area() const;
 };
 
 /// “Is empty” in the same sense as Interval::Empty().
@@ -956,12 +956,12 @@ inline bool interval_vector_is_point(const std::vector<double>& v) {
 /// Returns: true if values is within the domain.
 /// Precondition: the vector is sorted and has at least 1 element.
 inline bool interval_vector_includes(
-	const std::vector<double>& v,
-	const double value
+    const std::vector<double>& v,
+    const double value
 ) {
-	return !v.empty() &&
-			goc::epsilon_smaller_equal(v.front(), value) &&
-		   	goc::epsilon_smaller_equal(value, v.back());
+    return !v.empty() &&
+            goc::epsilon_smaller_equal(v.front(), value) &&
+               goc::epsilon_smaller_equal(value, v.back());
 }
 
 /// Does [v] sit inside [w]?
@@ -980,48 +980,96 @@ inline bool interval_vector_intersects(
     const std::vector<double>& v,
     const std::vector<double>& w
 ) {
-	if (v.empty() || w.empty()) return false; // empty intervals do not intersect
-	return !(goc::epsilon_smaller(v.back(), w.front()) ||
-			 goc::epsilon_bigger(v.front(), w.back()));
+    if (v.empty() || w.empty()) return false; // empty intervals do not intersect
+    return !(goc::epsilon_smaller(v.back(), w.front()) ||
+             goc::epsilon_bigger(v.front(), w.back()));
 }
 
 /// Do [v] and [w] not overlap at all?
 inline bool interval_vector_disjoints(
-	const std::vector<double>& v,
-	const std::vector<double>& w
+    const std::vector<double>& v,
+    const std::vector<double>& w
 ) {
  if (v.empty() || w.empty()) return true; // empty intervals do not intersect
  return goc::epsilon_smaller(v.back(), w.front()) ||
-	goc::epsilon_bigger(v.front(), w.back());
+    goc::epsilon_bigger(v.front(), w.back());
 }
 
 // Tests for the interval_vector functions.
 void test_interval_vector_intersects();
 void test_interval_vector_includes();
 
+// Computes the slope of the segment between two points (x1, y1) and (x2, y2).
+// NOTE: If the segment is vertical, it returns goc::INFTY.
+// NOTE: If the segment is horizontal, it returns 0.0.
 inline double compute_slope(
-	const double x1, const double y1,
-	const double x2, const double y2
+    const double x1, const double y1,
+    const double x2, const double y2
 ) {
-	if (goc::epsilon_equal(x2, x1)) {
-		return goc::INFTY; // Handle vertical segments
-	}
-	double slope = (y2 - y1) / (x2 - x1);
-	if (slope < goc::EPS_SLOPE_ZERO) {
-		return 0.0; // Handle horizontal segments
-	}
-	return slope;
+    if (goc::epsilon_equal(x2, x1)) {
+        return goc::INFTY; // Handle vertical segments
+    }
+    double slope = (y2 - y1) / (x2 - x1);
+    if (slope < goc::EPS_SLOPE_ZERO) {
+        return 0.0; // Handle horizontal segments
+    }
+    return slope;
 }
+
+// Computes the intercept of the segment between a point (x1, y1) and a slope.
+// NOTE: If the slope is 0, it returns y1 (horizontal segment).
+// NOTE: If the slope is goc::INFTY, it returns goc::INFTY (vertical segment).
 inline double compute_intercept(
- const double x1, const double y1,
- const double slope
+    const double x1, const double y1,
+    const double slope
 ) {
-	if (slope < goc::EPS_SLOPE_ZERO) {
-		return y1; // Handle horizontal segments
-	} else if (goc::epsilon_bigger_equal(slope, goc::INFTY)) {
-		return goc::INFTY; // Handle vertical segments
-	}
- 	return y1 - slope * x1;
+    if (slope < goc::EPS_SLOPE_ZERO) {
+        return y1; // Handle horizontal segments
+    } else if (goc::epsilon_bigger_equal(slope, goc::INFTY)) {
+        return goc::INFTY; // Handle vertical segments
+    }
+     return y1 - slope * x1;
+}
+
+// Utility function for checking normalization.
+// Before adding a point to a NDCPWLF, it checks if the last added point
+// is not redundant with the new point, and removed it if it is.
+// Then add the new point to the xs and ys vectors.
+inline void normalized_add(
+    std::vector<double>& xs,
+    std::vector<double>& ys,
+    double x_next, double y_next
+) {
+    // Guard case
+    if (xs.size() < 2) {
+        xs.push_back(x_next);
+        ys.push_back(y_next);
+        return;
+    }
+
+    size_t i = xs.size() - 1; // index of last added point
+    double x_prev = xs[i - 1];
+    double y_prev = ys[i - 1];
+    double x_curr = xs[i];
+    double y_curr = ys[i];
+
+    double slope1 = compute_slope(x_prev, y_prev, x_curr, y_curr);
+    double slope2 = compute_slope(x_curr, y_curr, x_next, y_next);
+
+    // If the last point is redundant with the new point, remove it
+    // by replacing it with the new one.
+    // If both slopes are 0, reuse last y value
+    if (goc::epsilon_equal(slope1, slope2)) {
+        xs[i] = x_next;
+        if(goc::epsilon_different(slope1, 0.0)) {
+            ys[i] = y_next; // Only update y if the slope is not 0
+        }
+        return;
+    }
+    
+    // Add the new additional point
+    xs.push_back(x_next);
+    ys.push_back(y_next);
 }
 
 } // namespace nyr

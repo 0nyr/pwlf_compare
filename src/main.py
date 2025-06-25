@@ -2,6 +2,10 @@ import sys
 import os
 import random
 import argparse
+import time
+
+PROG_START_TIME = time.time()
+print("Starting program [datetime: {}]".format(time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(PROG_START_TIME))))
 
 p = argparse.ArgumentParser(description="Configure & build the C++ solver")
 p.add_argument(
@@ -58,7 +62,6 @@ pwlf_cpp.nyr.test_interval_vector_includes()
 import matplotlib.pyplot as plt
 import pandas as pd
 import sys
-import time
 from enum import Enum, auto
 
 def plot_raw_pwl_function(
@@ -731,7 +734,8 @@ def benchmark_given_ndcpwlf_composition(
     composition_chain_lengths: list[int],
     pwlf_nb_breakpoints: list[int],
     print_composed_functions: bool = False,
-    plot_composed_functions: bool = False
+    plot_composed_functions: bool = False,
+    nb_runs_for_each: int = 1
 ):
     df = pd.DataFrame()
 
@@ -787,18 +791,26 @@ def benchmark_given_ndcpwlf_composition(
 
                 if libtype == "goc":
                     goc_composed_function = goc_functions_for_chain[0]
-                    start_time = time.time()
-                    if not name.endswith("tree"):
-                        # Sequential composition
-                        for i in range(1, chain_length):
-                            goc_composed_function = getattr(goc_composed_function, compose_method)(goc_functions_for_chain[i])
-                    else:
-                        # Tree chain composition
-                        goc_composed_function = perform_tree_chain_composition(
-                            goc_functions_for_chain[:chain_length],
-                            compose_method_name=compose_method
-                        )
-                    compose_time = time.time() - start_time
+                    times_for_each_run = []
+
+                    for _ in range(nb_runs_for_each):
+                        goc_composed_function = goc_functions_for_chain[0]
+                        start_time = time.time()
+                        if not name.endswith("tree"):
+                            # Sequential composition
+                            for i in range(1, chain_length):
+                                goc_composed_function = getattr(goc_composed_function, compose_method)(goc_functions_for_chain[i])
+                        else:
+                            # Tree chain composition
+                            goc_composed_function = perform_tree_chain_composition(
+                                goc_functions_for_chain[:chain_length],
+                                compose_method_name=compose_method
+                            )
+                        compose_time = time.time() - start_time
+                        times_for_each_run.append(compose_time)
+                    
+                    compose_time = sum(times_for_each_run) / len(times_for_each_run)
+
                     num_pieces = goc_composed_function.piece_count()
                     area = goc_composed_function.compute_area()
                     memory_used = get_size_in_bytes(goc_composed_function)
@@ -819,18 +831,26 @@ def benchmark_given_ndcpwlf_composition(
 
                 elif libtype == "nyr":
                     nyr_composed_function = nyr_functions_for_chain[0]
-                    start_time = time.time()
-                    if not name.endswith("tree"):
-                        # Sequential composition
-                        for i in range(1, chain_length):
-                            nyr_composed_function = getattr(nyr_composed_function, compose_method)(nyr_functions_for_chain[i])
-                    else:
-                        # Tree chain composition
-                        nyr_composed_function = perform_tree_chain_composition(
-                            nyr_functions_for_chain[:chain_length],
-                            compose_method_name=compose_method     
-                        )
-                    compose_time = time.time() - start_time
+                    times_for_each_run = []
+
+                    for _ in range(nb_runs_for_each):
+                        nyr_composed_function = nyr_functions_for_chain[0]
+                        start_time = time.time()
+                        if not name.endswith("tree"):
+                            # Sequential composition
+                            for i in range(1, chain_length):
+                                nyr_composed_function = getattr(nyr_composed_function, compose_method)(nyr_functions_for_chain[i])
+                        else:
+                            # Tree chain composition
+                            nyr_composed_function = perform_tree_chain_composition(
+                                nyr_functions_for_chain[:chain_length],
+                                compose_method_name=compose_method     
+                            )
+                        compose_time = time.time() - start_time
+                        times_for_each_run.append(compose_time)
+
+                    compose_time = sum(times_for_each_run) / len(times_for_each_run)
+
                     num_pieces = nyr_composed_function.nb_pieces()
                     area = nyr_composed_function.compute_area()
                     memory_used = get_size_in_bytes(nyr_composed_function)
@@ -857,6 +877,7 @@ def benchmark_given_ndcpwlf_composition(
 
                 # Gather stats
                 stats = {
+                    "Max nb breakpoints": num_breakpoints,
                     "Start nb pieces": start_nb_pieces,
                     "Chain Length": chain_length,
                     "Function": name,
@@ -865,7 +886,7 @@ def benchmark_given_ndcpwlf_composition(
                     "Domain": f"[{round(domain[0], 2)}, {round(domain[1], 2)}]",
                     "Image": f"[{round(image[0], 2)}, {round(image[1], 2)}]",
                     "Memory Used (Bytes)": memory_used,
-                    "Compose Time (s)": compose_time
+                    "Compose Time Avg (s)": compose_time
                 }
 
                 df_current_stats = pd.DataFrame(stats, index=[0])
@@ -889,7 +910,7 @@ def benchmark_given_ndcpwlf_composition(
     best_time_name = ""
     
     for _, name, _ in FUNCTION_VERSIONS:
-        total_time = df[df["Function"] == name]["Compose Time (s)"].sum()
+        total_time = df[df["Function"] == name]["Compose Time Avg (s)"].sum()
         total_memory = df[df["Function"] == name]["Memory Used (Bytes)"].sum()
         print(f"Total Time {name}: {total_time} s")
         print(f"Total Memory {name}: {total_memory} Bytes")
@@ -905,10 +926,44 @@ def benchmark_given_ndcpwlf_composition(
     print(f"\nBest memory usage: {best_memory_name} ({best_memory_usage} Bytes)")
     print(f"Best time usage: {best_time_name} ({best_time_usage} s)")
 
+    # 6. Print as LaTeX table
+    # Remove columns that are not needed for the final output
+    df = df.drop(columns=["Start nb pieces", "Area", "Domain", "Image"])
+    print("\nLaTeX table for the benchmark results (remember to replace 'tabular' by 'longtable' if needed):\n")
+
+    # rename columns for better readability
+    df = df.rename(columns={
+        "Max nb breakpoints": "$p$",
+        "Chain Length": "$n$",
+        "Function": "Composition Function",
+        "Num Pieces": "Num Pieces",
+        "Memory Used (Bytes)": "Memory (Bytes)",
+        "Compose Time Avg (s)": "Time (s)"
+    })
+    # Use scientific notation with 2 decimals for floats
+
+    def sci_fmt(x):
+        if isinstance(x, float):
+            return "{:.2e}".format(x)
+        return x
+
+    print(df.to_latex(
+        index=False,
+        float_format=lambda x: "{:.2e}".format(x),
+        column_format="cccccccccc"
+    ))
+
 
 benchmark_given_ndcpwlf_composition(
     composition_chain_lengths=[2, 100, 1000],
     pwlf_nb_breakpoints=[6, 100, 1000, 10000],
     print_composed_functions=False,
-    plot_composed_functions=False
+    plot_composed_functions=False,
+    nb_runs_for_each=5
+)
+
+print(
+    "Program finished successfully. Total time:", 
+    time.time() - PROG_START_TIME, 
+    "seconds"
 )
