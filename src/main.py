@@ -496,6 +496,9 @@ def perform_tree_chain_composition(
                     next_composed_functions.append(
                         getattr(f1, compose_method_name)(f2)
                     )
+                # In case of an odd number of functions, the last one is added as is
+                if len(composed_functions) % 2 == 1:
+                    next_composed_functions.append(composed_functions[-1])  
                 composed_functions = next_composed_functions
 
             return composed_functions[0]
@@ -727,6 +730,8 @@ def benchmark_pwl_function_implementation(
 def benchmark_given_ndcpwlf_composition(
     composition_chain_lengths: list[int],
     pwlf_nb_breakpoints: list[int],
+    print_composed_functions: bool = False,
+    plot_composed_functions: bool = False
 ):
     df = pd.DataFrame()
 
@@ -777,6 +782,8 @@ def benchmark_given_ndcpwlf_composition(
                 area = 0.0
                 memory_used = 0
                 compose_time = 0.0
+                domain = (0.0, 0.0)
+                image = (0.0, 0.0)
 
                 if libtype == "goc":
                     goc_composed_function = goc_functions_for_chain[0]
@@ -784,7 +791,7 @@ def benchmark_given_ndcpwlf_composition(
                     if not name.endswith("tree"):
                         # Sequential composition
                         for i in range(1, chain_length):
-                            goc_composed_function = goc_composed_function.compose(goc_functions_for_chain[i])
+                            goc_composed_function = getattr(goc_composed_function, compose_method)(goc_functions_for_chain[i])
                     else:
                         # Tree chain composition
                         goc_composed_function = perform_tree_chain_composition(
@@ -795,6 +802,20 @@ def benchmark_given_ndcpwlf_composition(
                     num_pieces = goc_composed_function.piece_count()
                     area = goc_composed_function.compute_area()
                     memory_used = get_size_in_bytes(goc_composed_function)
+                    domain = (
+                        goc_composed_function.domain().left,
+                        goc_composed_function.domain().right
+                    )
+                    image = (
+                        goc_composed_function.image().left,
+                        goc_composed_function.image().right
+                    )
+                    if plot_composed_functions:
+                        plot_goc_pwl_function(
+                            pwl_function=goc_composed_function,
+                            plot_subname="goc_" + name 
+                        )
+                        print(goc_composed_function)
 
                 elif libtype == "nyr":
                     nyr_composed_function = nyr_functions_for_chain[0]
@@ -813,6 +834,21 @@ def benchmark_given_ndcpwlf_composition(
                     num_pieces = nyr_composed_function.nb_pieces()
                     area = nyr_composed_function.compute_area()
                     memory_used = get_size_in_bytes(nyr_composed_function)
+                    domain = (
+                        nyr_composed_function.get_min_domain(),
+                        nyr_composed_function.get_max_domain()
+                    )
+                    image = (
+                        nyr_composed_function.get_min_image(),
+                        nyr_composed_function.get_max_image()
+                    )
+                    if plot_composed_functions:
+                        plot_nyr_cpwlf_function(
+                            cpwlf_function=nyr_composed_function,
+                            plot_subname="nyr_" + name
+                        )
+                        print(nyr_composed_function)
+
                     # if name == "visser2020+tree" and chain_length == 1000:
                     #     print(nyr_composed_function)
 
@@ -826,6 +862,8 @@ def benchmark_given_ndcpwlf_composition(
                     "Function": name,
                     "Num Pieces": num_pieces,
                     "Area": area,
+                    "Domain": f"[{round(domain[0], 2)}, {round(domain[1], 2)}]",
+                    "Image": f"[{round(image[0], 2)}, {round(image[1], 2)}]",
                     "Memory Used (Bytes)": memory_used,
                     "Compose Time (s)": compose_time
                 }
@@ -871,4 +909,6 @@ def benchmark_given_ndcpwlf_composition(
 benchmark_given_ndcpwlf_composition(
     composition_chain_lengths=[2, 10, 100, 1000],
     pwlf_nb_breakpoints=[1000],
+    print_composed_functions=False,
+    plot_composed_functions=False
 )
