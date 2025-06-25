@@ -999,22 +999,27 @@ inline bool interval_vector_disjoints(
 void test_interval_vector_intersects();
 void test_interval_vector_includes();
 
-inline double compute_raw_slope(
+inline double compute_slope(
 	const double x1, const double y1,
 	const double x2, const double y2
 ) {
+	if (goc::epsilon_equal(x2, x1)) {
+		return goc::INFTY; // Handle vertical segments
+	}
 	double slope = (y2 - y1) / (x2 - x1);
 	if (slope < goc::EPS_SLOPE_ZERO) {
-		slope = 0.0; // Handle horizontal segments
+		return 0.0; // Handle horizontal segments
 	}
 	return slope;
 }
-inline double compute_raw_intercept(
+inline double compute_intercept(
  const double x1, const double y1,
  const double slope
 ) {
 	if (slope < goc::EPS_SLOPE_ZERO) {
 		return y1; // Handle horizontal segments
+	} else if (goc::epsilon_bigger_equal(slope, goc::INFTY)) {
+		return goc::INFTY; // Handle vertical segments
 	}
  	return y1 - slope * x1;
 }

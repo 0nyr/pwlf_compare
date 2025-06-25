@@ -908,7 +908,7 @@ def benchmark_given_ndcpwlf_composition(
 
 benchmark_given_ndcpwlf_composition(
     composition_chain_lengths=[2, 10, 100, 1000],
-    pwlf_nb_breakpoints=[1000],
+    pwlf_nb_breakpoints=[6, 100, 1000, 10000],
     print_composed_functions=False,
     plot_composed_functions=False
 )

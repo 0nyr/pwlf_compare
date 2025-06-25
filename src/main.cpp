@@ -1564,8 +1564,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
         double g_x1 = g.xs[j + 1];
         double g_y1 = g.ys[j + 1];
         if (j != cached_j) {
-            slope_g_piece = std::abs((g_y1 - g_y0) / (g_x1 - g_x0));
-            intercept_g_piece = g_y0 - slope_g_piece * g_x0;
+            slope_g_piece = compute_slope(g_x0, g_y0, g_x1, g_y1);
+            intercept_g_piece = compute_intercept(g_x0, g_y0, slope_g_piece);
             cached_j = j; // Cache the index for the next iteration
         }
 
@@ -1737,16 +1737,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
         double y_next = fog_ys[i+1];
 
         // Denominators can definitly be zero
-        double slope1 = (y_curr - y_prev) / (x_curr - x_prev);
-        double slope2 = (y_next - y_curr) / (x_next - x_curr);
-
-        // Edge case: comparing two slopes close to 0 is tricky.
-        if (slope1 < goc::EPS_SLOPE_ZERO) {
-            slope1 = 0.0; // Handle horizontal segments
-        }
-        if (slope2 < goc::EPS_SLOPE_ZERO) {
-            slope2 = 0.0; // Handle horizontal segments
-        }
+        double slope1 = compute_slope(x_prev, y_prev, x_curr, y_curr);
+        double slope2 = compute_slope(x_curr, y_curr, x_next, y_next);
 
         // Only add the current point if the slopes are different
         if (goc::epsilon_different(slope1, slope2)) {
@@ -1758,7 +1750,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose(const nyr::NDCPWLF& g) const {
             }
         } else {
             #ifndef NDEBUG
-            std::cout << "NDCPWLF::compose: Removing intermediate point at index " << i
+            std::clog << "NDCPWLF::compose: Removing intermediate point at index " << i
             << " with coordinates (" << x_curr << ", " << y_curr << ")"
             << std::endl;
             #endif
@@ -1812,13 +1804,13 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
     double intercept_g_piece = 0.0;
     if (f.xs.size() > 1) {
         // Compute slope and intercept for the first piece of f
-        slope_f_piece = compute_raw_slope(f.xs[0], f.ys[0], f.xs[1], f.ys[1]);
-        intercept_f_piece = compute_raw_intercept(f.xs[0], f.ys[0], slope_f_piece);
+        slope_f_piece = compute_slope(f.xs[0], f.ys[0], f.xs[1], f.ys[1]);
+        intercept_f_piece = compute_intercept(f.xs[0], f.ys[0], slope_f_piece);
     }
     if (g.ys.size() > 1) {
         // Compute slope and intercept for the first piece of g
-        slope_g_piece = compute_raw_slope(g.xs[0], g.ys[0], g.xs[1], g.ys[1]);
-        intercept_g_piece = compute_raw_intercept(g.xs[0], g.ys[0], slope_g_piece);
+        slope_g_piece = compute_slope(g.xs[0], g.ys[0], g.xs[1], g.ys[1]);
+        intercept_g_piece = compute_intercept(g.xs[0], g.ys[0], slope_g_piece);
     }
 
     while (i < f.xs.size() && j < g.ys.size()) {
@@ -1852,8 +1844,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
             }
             // i has changed, so we need to recompute the slope and intercept
             if (i < f.xs.size() - 1) {
-                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
-                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+                slope_f_piece = compute_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_intercept(f.xs[i], f.ys[i], slope_f_piece);
             }
             i += 1; // Move to next point of f
         } else if (goc::epsilon_equal(g_y, f_x)) {
@@ -1866,14 +1858,14 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
 
             if (i < f.xs.size() - 1) {
                 // Recompute the slope and intercept for the next piece of f
-                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
-                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+                slope_f_piece = compute_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_intercept(f.xs[i], f.ys[i], slope_f_piece);
             }
             i += 1; // Move to next point of f
             if (j < g.ys.size() - 1) {
                 // Recompute the slope and intercept for the next piece of g
-                slope_g_piece = compute_raw_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
-                intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
+                slope_g_piece = compute_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
+                intercept_g_piece = compute_intercept(g.xs[j], g.ys[j], slope_g_piece);
             }
             j += 1; // Move to next point of g
 
@@ -1908,8 +1900,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
             }
             // j has changed, so we need to recompute the slope and intercept
             if (j < g.ys.size()) {
-                slope_g_piece = compute_raw_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
-                intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
+                slope_g_piece = compute_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
+                intercept_g_piece = compute_intercept(g.xs[j], g.ys[j], slope_g_piece);
             }
             j += 1; // Move to next point of g
         } 
@@ -1958,13 +1950,13 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
     double intercept_g_piece = 0.0;
     if (f.xs.size() > 1) {
         // Compute slope and intercept for the first piece of f
-        slope_f_piece = compute_raw_slope(f.xs[0], f.ys[0], f.xs[1], f.ys[1]);
-        intercept_f_piece = compute_raw_intercept(f.xs[0], f.ys[0], slope_f_piece);
+        slope_f_piece = compute_slope(f.xs[0], f.ys[0], f.xs[1], f.ys[1]);
+        intercept_f_piece = compute_intercept(f.xs[0], f.ys[0], slope_f_piece);
     }
     if (g.ys.size() > 1) {
         // Compute slope and intercept for the first piece of g
-        slope_g_piece = compute_raw_slope(g.xs[0], g.ys[0], g.xs[1], g.ys[1]);
-        intercept_g_piece = compute_raw_intercept(g.xs[0], g.ys[0], slope_g_piece);
+        slope_g_piece = compute_slope(g.xs[0], g.ys[0], g.xs[1], g.ys[1]);
+        intercept_g_piece = compute_intercept(g.xs[0], g.ys[0], slope_g_piece);
     }
 
     while (i < f.xs.size() && j < g.ys.size()) {
@@ -1998,8 +1990,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
             }
             // i has changed, so we need to recompute the slope and intercept
             if (i < f.xs.size() - 1) {
-                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
-                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+                slope_f_piece = compute_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_intercept(f.xs[i], f.ys[i], slope_f_piece);
             }
             i += 1; // Move to next point of f
         } else if (goc::epsilon_equal(g_y, f_x)) {
@@ -2012,14 +2004,14 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
 
             if (i < f.xs.size() - 1) {
                 // Recompute the slope and intercept for the next piece of f
-                slope_f_piece = compute_raw_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
-                intercept_f_piece = compute_raw_intercept(f.xs[i], f.ys[i], slope_f_piece);
+                slope_f_piece = compute_slope(f.xs[i], f.ys[i], f.xs[i + 1], f.ys[i + 1]);
+                intercept_f_piece = compute_intercept(f.xs[i], f.ys[i], slope_f_piece);
             }
             i += 1; // Move to next point of f
             if (j < g.ys.size() - 1) {
                 // Recompute the slope and intercept for the next piece of g
-                slope_g_piece = compute_raw_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
-                intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
+                slope_g_piece = compute_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
+                intercept_g_piece = compute_intercept(g.xs[j], g.ys[j], slope_g_piece);
             }
             j += 1; // Move to next point of g
 
@@ -2054,8 +2046,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
             }
             // j has changed, so we need to recompute the slope and intercept
             if (j < g.ys.size()) {
-                slope_g_piece = compute_raw_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
-                intercept_g_piece = compute_raw_intercept(g.xs[j], g.ys[j], slope_g_piece);
+                slope_g_piece = compute_slope(g.xs[j], g.ys[j], g.xs[j + 1], g.ys[j + 1]);
+                intercept_g_piece = compute_intercept(g.xs[j], g.ys[j], slope_g_piece);
             }
             j += 1; // Move to next point of g
         } 
@@ -2086,16 +2078,8 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
         double y_next = fog_ys[i+1];
 
         // Denominators can definitly be zero
-        double slope1 = (y_curr - y_prev) / (x_curr - x_prev);
-        double slope2 = (y_next - y_curr) / (x_next - x_curr);
-
-        // Edge case: comparing two slopes close to 0 is tricky.
-        if (slope1 < goc::EPS_SLOPE_ZERO) {
-            slope1 = 0.0; // Handle horizontal segments
-        }
-        if (slope2 < goc::EPS_SLOPE_ZERO) {
-            slope2 = 0.0; // Handle horizontal segments
-        }
+        double slope1 = compute_slope(x_prev, y_prev, x_curr, y_curr);
+        double slope2 = compute_slope(x_curr, y_curr, x_next, y_next);
 
         // Only add the current point if the slopes are different
         if (goc::epsilon_different(slope1, slope2)) {
@@ -2107,7 +2091,7 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
             }
         } else {
             #ifndef NDEBUG
-            std::cout << "NDCPWLF::compose: Removing intermediate point at index " << i
+            std::clog << "NDCPWLF::compose: Removing intermediate point at index " << i
             << " with coordinates (" << x_curr << ", " << y_curr << ")"
             << std::endl;
             #endif
@@ -2184,10 +2168,9 @@ double NDCPWLF::compute_area() const {
         const double x2 = xs[i+1];
         const double y2 = ys[i+1];
 
-        const double slope = std::abs((y2 - y1) / (x2 - x1));
+        const double slope = compute_slope(x1, y1, x2, y2);
         if (// Is the matching f piece vertical?
-            goc::epsilon_equal(x1, x2)
-            || goc::epsilon_bigger_equal(slope, goc::INFTY)
+            goc::epsilon_bigger_equal(slope, goc::INFTY)
         ) {
             continue; // A vertical segment has 0 area under it.
         }
