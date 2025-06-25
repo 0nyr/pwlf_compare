@@ -909,11 +909,31 @@ def benchmark_given_ndcpwlf_composition(
     best_time_usage = float('inf')
     best_time_name = ""
     
+    # Predefine LaTeX colors
+    print(r"""\usepackage{colortbl}
+    \usepackage{xcolor}
+    \definecolor{besttime}{RGB}{198, 239, 206} % light green
+    \definecolor{bestmem}{RGB}{221, 235, 247}  % light blue
+    """)
+
+    # Table initialization
+    latex_rows = []
+    best_memory_usage = float("inf")
+    best_memory_name = ""
+    best_time_usage = float("inf")
+    best_time_name = ""
+
+    rows = []
+
     for _, name, _ in FUNCTION_VERSIONS:
         total_time = df[df["Function"] == name]["Compose Time Avg (s)"].sum()
         total_memory = df[df["Function"] == name]["Memory Used (Bytes)"].sum()
+        
         print(f"Total Time {name}: {total_time} s")
         print(f"Total Memory {name}: {total_memory} Bytes")
+
+        rows.append((name, total_time, total_memory))
+
         if total_memory == best_memory_usage:
             best_memory_name += f" & {name}"
         if total_memory < best_memory_usage:
@@ -922,11 +942,41 @@ def benchmark_given_ndcpwlf_composition(
         if total_time < best_time_usage:
             best_time_usage = total_time
             best_time_name = name
-    
-    print(f"\nBest memory usage: {best_memory_name} ({best_memory_usage} Bytes)")
-    print(f"Best time usage: {best_time_name} ({best_time_usage} s)")
 
-    # 6. Print as LaTeX table
+    print(f"\nBest memory usage: {best_memory_name} ({best_memory_usage} Bytes)")
+    print(f"Best time usage: {best_time_name} ({best_time_usage} s)\n")
+
+    # Print LaTeX table
+    print("LaTeX table for the concat. benchmark results\n")
+
+    print(
+r"""\begin{table}[h!]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Method} & \textbf{Time (s)} & \textbf{Memory (Bytes)} \\
+\midrule"""
+    )
+
+    for name, total_time, mem in rows:
+        rowcolor = ""
+        if name == best_time_name:
+            rowcolor = r"\rowcolor{besttime}" + "\n"
+        elif mem == best_memory_usage:
+            rowcolor = r"\rowcolor{bestmem}" + "\n"
+        print(f"{rowcolor}{name} & {total_time:.5f} & {mem} \\\\")
+
+    print(
+r"""\bottomrule
+\end{tabular}
+\caption{Concatenated benchmark results for composition of NDCPWLFs}
+\end{table}"""
+    )
+
+    print()
+
+    # 6. Print as full LaTeX table
     # Remove columns that are not needed for the final output
     df = df.drop(columns=["Start nb pieces", "Area", "Domain", "Image"])
     print("\nLaTeX table for the benchmark results (remember to replace 'tabular' by 'longtable' if needed):\n")
@@ -955,8 +1005,8 @@ def benchmark_given_ndcpwlf_composition(
 
 
 benchmark_given_ndcpwlf_composition(
-    composition_chain_lengths=[2, 100, 1000],
-    pwlf_nb_breakpoints=[6, 100, 1000, 10000],
+    composition_chain_lengths=[100],
+    pwlf_nb_breakpoints=[100],
     print_composed_functions=False,
     plot_composed_functions=False,
     nb_runs_for_each=5
