@@ -39,8 +39,7 @@ def configure_and_build(build_type: str, clean: bool, just_compile: bool):
     cmake_args = [
         "cmake",
         CMAKELISTS_DIR,
-        f"-DCMAKE_BUILD_TYPE={build_type.capitalize()}",
-        "-DRUNNER=ON"
+        f"-DCMAKE_BUILD_TYPE={build_type.capitalize()}"
     ]
     nprocs = multiprocessing.cpu_count() or 1
     make_args  = ["make", f"-j{nprocs}"]
@@ -62,8 +61,8 @@ def main():
     p = argparse.ArgumentParser(description="Configure & build the C++ solver")
     p.add_argument(
         "--mode","-m",
-        choices=("debug","release","both"),
-        default="both",
+        choices=("debug","release","fastdebug","all"),
+        default="all",
         help="Which configuration to build"
     )
     p.add_argument(
@@ -78,7 +77,7 @@ def main():
     )
     args = p.parse_args()
 
-    targets = [args.mode] if args.mode in ("debug","release") else ["debug","release"]
+    targets = [args.mode] if args.mode in ("debug", "release", "fastdebug") else ["debug", "release", "fastdebug"]
     for mode in targets:
         configure_and_build(mode, clean=args.clean, just_compile=args.just_compile)
 

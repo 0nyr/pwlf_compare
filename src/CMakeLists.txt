@@ -5,19 +5,42 @@ project(solver)
 set(CMAKE_CXX_STANDARD 26)
 message("-- C++ version: ${CMAKE_CXX_STANDARD}")
 
-# sanitizer flags
+# Disable Nix no native
+set(NIX_ENFORCE_NO_NATIVE OFF)
+
+# allow three build‐types: Release, Debug, Fastdebug
+set(VALID_BUILD_TYPES Release Debug Fastdebug)
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Fastdebug CACHE STRING "Choose build type: ${VALID_BUILD_TYPES}" FORCE)
+endif()
+message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
+
+# common flags
+set(COMMON_FLAGS "-pthread -m64")
+string(APPEND CMAKE_CXX_FLAGS        " ${COMMON_FLAGS}")
+string(APPEND CMAKE_SHARED_LINKER_FLAGS " ${COMMON_FLAGS}")
+
+# sanitizer flags for plain Debug only
 set(UBSAN_FLAGS "-fsanitize=float-divide-by-zero,float-cast-overflow")
 
-# Set compiler flags
-if ("${CMAKE_BUILD_TYPE}" MATCHES debug OR "${CMAKE_BUILD_TYPE}" MATCHES Debug)
-    message("-- Compiling in Debug Mode")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Og -Wall -Wextra ${UBSAN_FLAGS}")
-    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} ${UBSAN_FLAGS}")
+# set flags based on build type
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+  message(STATUS "-- Compiling in Release Mode")
+  string(APPEND CMAKE_CXX_FLAGS " -O3 -DNDEBUG -march=native -mtune=native")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  message(STATUS "-- Compiling in Debug Mode (UBSan & logging)")
+  string(APPEND CMAKE_CXX_FLAGS        " -g -Og -Wall -Wextra ${UBSAN_FLAGS}")
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS " ${UBSAN_FLAGS}")
+  # preserve full logging (no extra defines)
+elseif(CMAKE_BUILD_TYPE STREQUAL "Fastdebug")
+  message(STATUS "-- Compiling in Fastdebug Mode (UBSan, no logging, quick iter)")
+  # a light optimization level to keep compile+link cheap
+  string(APPEND CMAKE_CXX_FLAGS " -g -O1 -Wall -Wextra ${UBSAN_FLAGS}")
+  string(APPEND CMAKE_SHARED_LINKER_FLAGS " ${UBSAN_FLAGS}")
 else()
-    message("-- Compiling in Release Mode")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${UBSAN_FLAGS} -DNDEBUG")
-    set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} ${UBSAN_FLAGS}")
+  message(FATAL_ERROR "Unknown CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}. Valid types: ${VALID_BUILD_TYPES}")
 endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used to generate compile_commands.json for VSCode intellisense/warnings
 
 # Tell GCC to use the plugin-based linker and allow real parallel LTO

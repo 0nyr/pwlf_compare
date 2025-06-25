@@ -59,6 +59,9 @@
             # pybind11 environment variables
             export PYBIND11_INCLUDE="${pythonPackages.pybind11}/include"
 
+            unset NIX_ENFORCE_NO_NATIVE
+            echo "WARNING: This shell is for development purposes only. Disable NIX_ENFORCE_NO_NATIVE to use native code generation."
+
             echo "BOOST_INCLUDE: $BOOST_INCLUDE"
             echo "BOOST_BIN: $BOOST_BIN"
             echo "PYBIND11_INCLUDE: $PYBIND11_INCLUDE"
