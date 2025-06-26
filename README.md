@@ -1,6 +1,6 @@
-# Compare & benchmark PWLF implementations
+# Compare & benchmark NDCPWLF composition implementations
 
-Testing and benchmarking implementation of Non Decreasing Continuous PieceWise Linear Functions. Such functions are crucial for Duration calculation when working in the context of Time-Dependent Routing Problems.
+Testing and benchmarking implementation of Non Decreasing Continuous PieceWise Linear Functions, especially the composition algorithm. Such functions are crucial for *Duration* calculation when working in the context of Time-Dependent Routing Problems.
 
 ## Commands
 
