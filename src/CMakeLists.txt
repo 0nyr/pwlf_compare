@@ -5,9 +5,6 @@ project(solver)
 set(CMAKE_CXX_STANDARD 26)
 message("-- C++ version: ${CMAKE_CXX_STANDARD}")
 
-# Disable Nix no native
-set(NIX_ENFORCE_NO_NATIVE OFF)
-
 # allow three build‐types: Release, Debug, Fastdebug
 set(VALID_BUILD_TYPES Release Debug Fastdebug)
 if(NOT CMAKE_BUILD_TYPE)
