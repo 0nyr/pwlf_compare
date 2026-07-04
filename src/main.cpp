@@ -1904,9 +1904,34 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser(const nyr::NDCPWLF& g) const {
                 intercept_g_piece = compute_intercept(g.xs[j], g.ys[j], slope_g_piece);
             }
             j += 1; // Move to next point of g
-        } 
+        }
     }
-    
+
+    // Tail flush — exact boundary ties at the exhausted operand's last breakpoint
+    // (2026-07-04, found via the TDVRPTW-solver Lera-BKS forensics): the merge
+    // exits as soon as one operand is exhausted, but trailing points of the other
+    // operand still belong to fog when they tie with the exhausted operand's last
+    // breakpoint (g flat at max(dom f) — the deadline-riding route shape — or f
+    // with a vertical step at max(img g)). Dropping them collapses the composed
+    // domain and loses the optimal (latest) departure time.
+    if (!fog_xs.empty()) {
+        if (i == f.xs.size()) {
+            for (; j < g.ys.size(); ++j) {
+                if (goc::epsilon_equal(g.ys[j], f.xs.back())) {
+                    fog_xs.push_back(g.xs[j]);
+                    fog_ys.push_back(f.ys.back());
+                }
+            }
+        } else if (j == g.ys.size()) {
+            for (; i < f.xs.size(); ++i) {
+                if (goc::epsilon_equal(f.xs[i], g.ys.back())) {
+                    fog_xs.push_back(g.xs.back());
+                    fog_ys.push_back(f.ys[i]);
+                }
+            }
+        }
+    }
+
     fog_xs.shrink_to_fit();
     fog_ys.shrink_to_fit();
 
@@ -2045,7 +2070,25 @@ nyr::NDCPWLF nyr::NDCPWLF::compose_visser_normalization(const nyr::NDCPWLF& g) c
                 intercept_g_piece = compute_intercept(g.xs[j], g.ys[j], slope_g_piece);
             }
             j += 1; // Move to next point of g
-        } 
+        }
+    }
+
+    // Tail flush — exact boundary ties at the exhausted operand's last breakpoint
+    // (same rationale as in compose_visser above).
+    if (!fog_xs.empty()) {
+        if (i == f.xs.size()) {
+            for (; j < g.ys.size(); ++j) {
+                if (goc::epsilon_equal(g.ys[j], f.xs.back())) {
+                    normalized_add(fog_xs, fog_ys, g.xs[j], f.ys.back());
+                }
+            }
+        } else if (j == g.ys.size()) {
+            for (; i < f.xs.size(); ++i) {
+                if (goc::epsilon_equal(f.xs[i], g.ys.back())) {
+                    normalized_add(fog_xs, fog_ys, g.xs.back(), f.ys[i]);
+                }
+            }
+        }
     }
 
     return nyr::NDCPWLF(fog_xs, fog_ys);
