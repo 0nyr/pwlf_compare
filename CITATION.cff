@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+title: pwlf_compare
+message: >-
+  If you use pwlf_compare, please cite it using the metadata
+  from this file.
+type: software
+authors:
+  - given-names: Florian
+    family-names: Rascoussier
+    alias: Onyr
+    affiliation: IMT Atlantique; INSA Lyon
+    orcid: "https://orcid.org/0009-0005-3253-9814"
+url: "https://github.com/0nyr/pwlf_compare"
+repository-code: "https://github.com/0nyr/pwlf_compare"
+abstract: >-
+  pwlf_compare is an experimental C++ and Python benchmark for comparing
+  implementations of non-decreasing continuous piecewise-linear function
+  composition. These functions are used for duration calculation in
+  time-dependent vehicle routing problems.
+keywords:
+  - time-dependent vehicle routing problem
+  - piecewise-linear functions
+  - NDCPWLF
+  - function composition
+  - route duration
+  - vehicle routing problem
+  - benchmarking
+  - C++
+  - Python
+  - operations research
+  - combinatorial optimization
+  - research software
