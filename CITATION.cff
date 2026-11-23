@@ -12,6 +12,7 @@ authors:
     orcid: "https://orcid.org/0009-0005-3253-9814"
 url: "https://github.com/0nyr/pwlf_compare"
 repository-code: "https://github.com/0nyr/pwlf_compare"
+license: MIT
 abstract: >-
   pwlf_compare is an experimental C++ and Python benchmark for comparing
   implementations of non-decreasing continuous piecewise-linear function
